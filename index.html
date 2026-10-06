@@ -42,6 +42,24 @@ input:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
 </style>
 </head>
 <body>
+<div id="diag" class="hidden" style="background:#fff3b0;border-bottom:2px solid #d9482b;padding:10px 14px;font-size:.9rem;white-space:pre-line"></div>
+<script>
+// شريط تشخيص: يظهر فقط إذا فشل تحميل ملفات اللعبة أو حدث خطأ
+(function () {
+  var d = document.getElementById("diag");
+  function show(t) { d.classList.remove("hidden"); d.textContent += t + "\n"; }
+  window.addEventListener("error", function (e) { show("خطأ: " + (e.message || "فشل تحميل ملف")); }, true);
+  window.addEventListener("unhandledrejection", function (e) { show("خطأ: " + (e.reason && (e.reason.message || e.reason))); });
+  setTimeout(async function () {
+    if (window.__ok) return;
+    show("لم يتم تحميل كود اللعبة. فحص الملفات:");
+    for (var f of ["js/rooms.js", "js/games/xo.js"]) {
+      try { var r = await fetch(f); show(f + " : " + (r.ok ? "موجود" : "غير موجود (" + r.status + ")")); }
+      catch (e) { show(f + " : تعذر الفحص"); }
+    }
+  }, 3000);
+})();
+</script>
 <main>
   <section id="home">
     <h1>ألعاب ثنائية</h1>
@@ -121,7 +139,7 @@ function render(r) {
 
 async function create(game) {
   try { enter(await R.createRoom(game, myName(), G[game].init())); }
-  catch (e) { errEl.textContent = "تعذّر إنشاء الغرفة. تأكد من الاتصال ومن قواعد Firebase."; }
+  catch (e) { errEl.textContent = "تعذّر إنشاء الغرفة: " + (e.code || e.message); }
 }
 
 async function join(c) {
@@ -143,6 +161,8 @@ $("#copy").onclick = async (e) => {
   catch { e.target.textContent = "انسخ من شريط العنوان"; }
   setTimeout(() => (e.target.textContent = "نسخ الرابط"), 2000);
 };
+
+window.__ok = true;
 
 // فتح رابط غرفة: العودة مباشرة إن كنت فيها، أو تجهيز خانة الكود للانضمام
 const p = (new URLSearchParams(location.search).get("room") || "").toUpperCase();
