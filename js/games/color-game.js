@@ -8,14 +8,12 @@ const COLORS = [
   { name: 'yellow', text: 'أصفر', hex: '#ffa502', btnClass: 'btn-yellow' }
 ];
 
-// توليد جولة جديدة بكلمة ولون متطابقين أو مختلفين للتحدي
 function makeRound() {
   const wordObj = rnd(COLORS);
   const colorObj = rnd(COLORS);
   return { word: wordObj.text, correctColor: colorObj.name, displayColorHex: colorObj.hex };
 }
 
-// ---- الواجهة والتنسيقات ----
 const CSS = `.color-game{direction:rtl;text-align:center;padding:10px}
 .color-display{font-size:3rem;font-weight:800;margin:25px 0;height:90px;display:flex;align-items:center;justify-content:center;letter-spacing:2px;text-shadow:0 4px 10px rgba(0,0,0,0.2);transition:transform 0.1s ease}
 .color-pad{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:20px}
@@ -50,27 +48,27 @@ function put(selectedColor) {
   if (s.winner || s.over) return;
 
   const isCorrect = (selectedColor === s.correctColor);
-  const scores = { ...s.scores };
+  const currentScore = s.scores[me] || 0;
 
   if (isCorrect) {
-    scores[me] += 1;
+    const newScore = currentScore + 1;
     const nextR = makeRound();
-    const p = { 
-      [`state/scores/${me}`]: scores[me],
+    const patchData = { 
+      [`state/scores/${me}`]: newScore,
       "state/word": nextR.word,
       "state/correctColor": nextR.correctColor,
       "state/displayColorHex": nextR.displayColorHex,
       "state/roundId": Math.random().toString(36).substring(7)
     };
-    if (scores[me] >= 10) { // فوز من يبلغ 10 نقاط أولاً
-      p["state/winner"] = me;
-      p["state/over"] = true;
+    if (newScore >= 10) {
+      patchData["state/winner"] = me;
+      patchData["state/over"] = true;
     }
-    api.patch(p);
+    api.patch(patchData);
   } else {
-    scores[me] = Math.max(0, scores[me] - 1); // خصم نقطة عند الخطأ مع تجنب النزول تحت الصفر
+    const newScore = Math.max(0, currentScore - 1);
     bad = 1;
-    api.patch({ [`state/scores/${me}`]: scores[me] });
+    api.patch({ [`state/scores/${me}`]: newScore });
     draw();
     setTimeout(() => { bad = -1; draw(); }, 400);
   }
