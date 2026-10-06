@@ -27,12 +27,12 @@ function count(g, lim) {
   for (const n of c) { g[i] = n; t += count(g, lim - t); if (t >= lim) break; }
   g[i] = 0; return t;
 }
-function make() {
+function make(n) {
   const g = Array(81).fill(0); fill(g);
   const sol = g.join(""), p = [...g]; let removed = 0;
   for (const i of rnd([...Array(81).keys()])) {
     const v = p[i]; p[i] = 0;
-    if (count(p, 2) !== 1) p[i] = v; else if (++removed >= 46) break;
+    if (count(p, 2) !== 1) p[i] = v; else if (++removed >= n) break;
   }
   return { sol, puz: p.join("") };
 }
@@ -50,11 +50,11 @@ const CSS = `.sdk{direction:ltr;display:grid;grid-template-columns:repeat(9,1fr)
 .pad button:disabled{opacity:.4}`;
 if (!document.getElementById("sdk-css")) { const st = document.createElement("style"); st.id = "sdk-css"; st.textContent = CSS; document.head.append(st); }
 
-let cur = null, sel = -1, bad = -1, lastPuz = "", keys = false;
+let cur = null, sel = -1, bad = -1, lastPuz = "", keys = false, view = "host";
 
 function put(d) {
   const { room: r, me, api } = cur, s = r.state;
-  if (sel < 0 || s.puz[sel] !== "0" || s.winner || s.over) return;
+  if (me === "spec" || sel < 0 || s.puz[sel] !== "0" || s.winner || s.over) return;
   if (s.mode === "race") {
     const b = s.boards[me], nb = b.slice(0, sel) + d + b.slice(sel + 1), p = { [`state/boards/${me}`]: nb };
     if (nb === s.sol) p["state/winner"] = me;
@@ -75,8 +75,8 @@ function put(d) {
 
 function draw() {
   const { el, room: r, me, api } = cur, s = r.state, race = s.mode === "race";
-  const op = me === "host" ? "guest" : "host";
-  const b = race ? s.boards[me] : s.board;
+  const spec = me === "spec", v = spec ? view : me, op = v === "host" ? "guest" : "host";
+  const b = race ? s.boards[v] : s.board;
   const over = race ? !!s.winner : !!s.over;
   let cells = "";
   for (let i = 0; i < 81; i++) {
@@ -92,7 +92,7 @@ function draw() {
   const total = [...s.puz].filter((x) => x === "0").length;
   let info, msg = "";
   if (race) {
-    info = `<b class="o">أنت: ${prog(b)}/${total}</b><b>${esc(r[op].name)}: ${prog(s.boards[op])}/${total}</b>`;
+    info = `<b class="o">${spec ? esc(r[v].name) : "أنت"}: ${prog(b)}/${total}</b><b>${esc(r[op].name)}: ${prog(s.boards[op])}/${total}</b>`;
     if (over) msg = s.winner === me ? "فزت! أكملت اللغز أولًا" : `فاز ${esc(r[s.winner].name)}`;
   } else {
     info = `<b class="x">${esc(r.host.name)}: ${s.scores.host}</b><b class="o">${esc(r.guest.name)}: ${s.scores.guest}</b>`;
@@ -101,21 +101,24 @@ function draw() {
   }
   const pad = [1, 2, 3, 4, 5, 6, 7, 8, 9].concat(race ? [0] : []).map((d) => `<button data-d="${d}" ${over ? "disabled" : ""}>${d || "⌫"}</button>`).join("");
   el.innerHTML = `<div class="score">${info}</div><p class="msg ${over ? "mine" : ""}">${msg || "&nbsp;"}</p>
-    <div class="sdk">${cells}</div><div class="pad">${pad}</div>
-    ${over ? '<button class="btn" id="again">لغز جديد</button>' : ""}`;
+    <div class="sdk">${cells}</div>${spec ? "" : `<div class="pad">${pad}</div>`}
+    ${spec && race ? '<button class="btn" id="sw">عرض لوحة الطرف الآخر</button>' : ""}${over && !spec ? '<button class="btn" id="again">لغز جديد</button>' : ""}`;
   el.querySelector(".sdk").onclick = (e) => { const i = e.target.dataset.i; if (i !== undefined) { sel = +i; draw(); } };
-  el.querySelector(".pad").onclick = (e) => { const d = e.target.dataset.d; if (d !== undefined) put(d); };
+  const pd = el.querySelector(".pad");
+  if (pd) pd.onclick = (e) => { const d = e.target.dataset.d; if (d !== undefined) put(d); };
+  const sw = el.querySelector("#sw");
+  if (sw) sw.onclick = () => { view = view === "host" ? "guest" : "host"; draw(); };
   const again = el.querySelector("#again");
-  if (again) again.onclick = () => api.patch({ state: game.init(s.mode) });
+  if (again) again.onclick = () => api.patch({ state: game.init(s.mode, s.diff) });
 }
 
 const game = {
   id: "sudoku",
-  init(mode) {
-    const { puz, sol } = make();
+  init(mode, diff = "medium") {
+    const { puz, sol } = make({ easy: 38, hard: 54 }[diff] || 46);
     return mode === "shared"
-      ? { mode, puz, sol, board: puz, owner: "0".repeat(81), scores: { host: 0, guest: 0 } }
-      : { mode: "race", puz, sol, boards: { host: puz, guest: puz } };
+      ? { mode, diff, puz, sol, board: puz, owner: "0".repeat(81), scores: { host: 0, guest: 0 } }
+      : { mode: "race", diff, puz, sol, boards: { host: puz, guest: puz } };
   },
   render(el, room, me, api) {
     if (room.state.puz !== lastPuz) { lastPuz = room.state.puz; sel = -1; }
