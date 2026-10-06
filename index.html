@@ -71,6 +71,7 @@ input:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
       <button class="game" data-game="xo"><b>XO</b><span>إنشاء غرفة</span></button>
       <button class="game" data-game="sudoku" data-mode="race"><b>سودوكو سباق</b><span>من يكمل أولًا</span></button>
       <button class="game" data-game="sudoku" data-mode="shared"><b>سودوكو مشتركة</b><span>نفس اللوحة بالنقاط</span></button>
+      <button class="game" data-game="color-game" data-mode="race"><b>تحدي الألوان</b><span>سرعة بديهة وتركز</span></button>
     </div>
     <label for="join">أو انضم بكود صديقك</label>
     <div class="row">
@@ -100,8 +101,9 @@ input:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
 import * as R from "./js/rooms.js";
 import xo from "./js/games/xo.js";
 import sudoku from "./js/games/sudoku.js";
+import colorGame from "./js/games/color-game.js";
 
-const G = { xo, sudoku };
+const G = { xo, sudoku, "color-game": colorGame };
 const $ = (s) => document.querySelector(s);
 const nameEl = $("#name"), errEl = $("#err");
 let code = null, unsub = null;
