@@ -25,6 +25,9 @@ input:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
 .btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
 #err{color:var(--x);min-height:1.5em;margin:12px 0 0}
 .hidden{display:none!important}
+select{width:100%;font:inherit;padding:11px;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+.top{flex-wrap:wrap}.top .row{flex-wrap:wrap}.top .btn{padding:8px 12px;font-size:.9rem}
+#offline{background:#fff3b0;border:2px solid var(--x);border-radius:10px;padding:8px 12px;font-weight:600}#meta{margin:0 0 12px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:16px}
 .chip{font-weight:800;letter-spacing:.25em;font-size:1.4rem;background:var(--ink);color:#fff;padding:4px 14px;border-radius:8px}
 .wait{text-align:center;padding:32px 8px}
@@ -69,11 +72,13 @@ input:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
     <label>اختر لعبة وأنشئ غرفة</label>
     <div class="games">
       <button class="game" data-game="xo"><b>XO</b><span>إنشاء غرفة</span></button>
+      <button class="game" data-game="color"><b>تحدي الألوان</b><span>30 ثانية، الأكثر صحة يفوز</span></button>
       <button class="game" data-game="sudoku" data-mode="race"><b>سودوكو سباق</b><span>من يكمل أولًا</span></button>
       <button class="game" data-game="sudoku" data-mode="shared"><b>سودوكو مشتركة</b><span>نفس اللوحة بالنقاط</span></button>
-      <button class="game" data-game="color-game" data-mode="race"><b>تحدي الألوان</b><span>سرعة بديهة وتركز</span></button>
     </div>
-    <label for="join">أو انضم بكود صديقك</label>
+    <label for="diff">صعوبة السودوكو</label>
+    <select id="diff"><option value="easy">سهل</option><option value="medium" selected>متوسط</option><option value="hard">صعب</option></select>
+    <label for="join">أو انضم بكود صديقك (إن كانت الغرفة ممتلئة تدخل كمشاهد)</label>
     <div class="row">
       <input id="join" maxlength="4" placeholder="ABCD" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em">
       <button class="btn" id="joinBtn">انضم</button>
@@ -86,9 +91,13 @@ input:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
       <span class="chip" id="code"></span>
       <div class="row">
         <button class="btn ghost" id="copy">نسخ الرابط</button>
+        <button class="btn ghost" id="wa">واتساب</button>
+        <button class="btn ghost" id="snd">🔊</button>
         <button class="btn ghost" id="leave">خروج</button>
       </div>
     </div>
+    <p id="offline" class="hidden" role="status"></p>
+    <p id="meta" class="sub"></p>
     <div id="wait" class="wait hidden">
       <h2>في انتظار صديقك…</h2>
       <p>أرسل له الكود أو اضغط «نسخ الرابط» وأرسله له.</p>
@@ -101,12 +110,12 @@ input:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
 import * as R from "./js/rooms.js";
 import xo from "./js/games/xo.js";
 import sudoku from "./js/games/sudoku.js";
-import colorGame from "./js/games/color-game.js";
+import color from "./js/games/color-game.js";
 
-const G = { xo, sudoku, "color-game": colorGame };
+const G = { xo, sudoku, color };
 const $ = (s) => document.querySelector(s);
 const nameEl = $("#name"), errEl = $("#err");
-let code = null, unsub = null;
+let code = null, unsub = null, unPres = null, prev = "", touched = 0, ac = null;
 
 nameEl.value = localStorage.getItem("name") || "";
 const myName = () => {
@@ -123,11 +132,13 @@ function enter(c) {
   $("#code").textContent = c;
   show("room");
   unsub = R.watch(c, render);
+  unPres = R.present(c, myName());
 }
 
 function leave(msg) {
   if (unsub) unsub();
-  unsub = null; code = null;
+  if (unPres) unPres();
+  unsub = unPres = null; code = null; prev = "";
   history.replaceState(null, "", location.pathname);
   show("home");
   errEl.textContent = msg || "";
@@ -138,11 +149,22 @@ function render(r) {
   const waiting = !r.guest;
   $("#wait").classList.toggle("hidden", !waiting);
   $("#game").classList.toggle("hidden", waiting);
-  if (!waiting) G[r.game].render($("#game"), r, R.role(code), { patch: (o) => R.patch(code, o) });
+  const me = R.role(code), op = me === "host" ? "guest" : "host", on = r.online || {};
+  const w = Object.values(r.spectators || {});
+  $("#meta").textContent = (me === "spec" ? "أنت تشاهد المباراة. " : "") + (w.length ? `👁 ${w.length} يشاهدون: ${w.map((x) => x.name).join("، ")}` : "");
+  const gone = me !== "spec" && r.guest && on[me] && !on[op];
+  $("#offline").classList.toggle("hidden", !gone);
+  if (gone) $("#offline").textContent = `${r[op].name} غير متصل حاليًا…`;
+  if (!waiting) {
+    const sig = JSON.stringify(r.state);
+    if (prev && sig !== prev && Date.now() - touched > 700) ping(); // تغيير من الطرف الآخر
+    prev = sig;
+    G[r.game].render($("#game"), r, me, { patch: (o) => R.patch(code, o) });
+  }
 }
 
 async function create(game, mode) {
-  try { enter(await R.createRoom(game, myName(), G[game].init(mode))); }
+  try { enter(await R.createRoom(game, myName(), G[game].init(mode, $("#diff").value))); }
   catch (e) { errEl.textContent = "تعذّر إنشاء الغرفة: " + (e.code || e.message); }
 }
 
@@ -159,12 +181,34 @@ async function join(c) {
 document.querySelectorAll(".game[data-game]").forEach((b) => b.onclick = () => create(b.dataset.game, b.dataset.mode));
 $("#joinBtn").onclick = () => join($("#join").value);
 $("#join").onkeydown = (e) => e.key === "Enter" && join(e.target.value);
-$("#leave").onclick = () => leave();
+$("#leave").onclick = async () => {
+  const c = code;
+  if (unsub) unsub();
+  if (unPres) unPres();
+  unsub = unPres = null;
+  try { await R.leaveRoom(c); } catch (e) {}
+  leave();
+};
+$("#wa").onclick = () => window.open("https://wa.me/?text=" + encodeURIComponent("تعال نلعب معي! " + location.origin + location.pathname + "?room=" + code), "_blank");
 $("#copy").onclick = async (e) => {
   try { await navigator.clipboard.writeText(location.origin + location.pathname + "?room=" + code); e.target.textContent = "تم النسخ"; }
   catch { e.target.textContent = "انسخ من شريط العنوان"; }
   setTimeout(() => (e.target.textContent = "نسخ الرابط"), 2000);
 };
+
+// صوت واهتزاز عند حركة الطرف الآخر
+function ping() {
+  if (localStorage.getItem("mute")) return;
+  if (navigator.vibrate) navigator.vibrate(40);
+  try { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; g.gain.value = 0.08; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.12); } catch (e) {}
+}
+["pointerdown", "keydown"].forEach((t) => document.addEventListener(t, () => {
+  touched = Date.now();
+  try { ac = ac || new AudioContext(); if (ac.state === "suspended") ac.resume(); } catch (e) {}
+}, true));
+const snd = $("#snd"), updSnd = () => (snd.textContent = localStorage.getItem("mute") ? "🔇" : "🔊");
+snd.onclick = () => { localStorage.getItem("mute") ? localStorage.removeItem("mute") : localStorage.setItem("mute", "1"); updSnd(); };
+updSnd();
 
 window.__ok = true;
 
