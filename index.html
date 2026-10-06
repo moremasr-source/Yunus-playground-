@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ألعاب ثنائية</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#eaf0f6;--ink:#17283d;--card:#fff;--line:#c6d3e1;--x:#d9482b;--o:#14808a;--mut:#5d6f84}
+*{box-sizing:border-box}
+body{margin:0;font-family:Cairo,system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+main{max-width:460px;margin:0 auto;padding:24px 16px}
+h1{font-size:2rem;font-weight:800;margin:8px 0 4px}
+.sub{color:var(--mut);margin:0 0 24px}
+label{display:block;font-weight:600;margin:16px 0 6px}
+input{width:100%;font:inherit;padding:12px 14px;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+input:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
+.games{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.game{font:inherit;text-align:right;padding:16px;border:2px solid var(--ink);border-radius:14px;background:var(--card);color:var(--ink);cursor:pointer}
+.game b{display:block;font-size:1.3rem}
+.game span{color:var(--mut);font-size:.9rem}
+.game:disabled{border-style:dashed;border-color:var(--line);cursor:default;opacity:.7}
+.row{display:flex;gap:8px}
+.btn{font:inherit;font-weight:600;padding:12px 18px;border:0;border-radius:10px;background:var(--ink);color:#fff;cursor:pointer;white-space:nowrap}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+#err{color:var(--x);min-height:1.5em;margin:12px 0 0}
+.hidden{display:none!important}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:16px}
+.chip{font-weight:800;letter-spacing:.25em;font-size:1.4rem;background:var(--ink);color:#fff;padding:4px 14px;border-radius:8px}
+.wait{text-align:center;padding:32px 8px}
+.wait p{color:var(--mut)}
+.score{display:flex;justify-content:space-between;gap:8px}
+.x{color:var(--x)}.o{color:var(--o)}
+.msg{text-align:center;font-size:1.4rem;font-weight:800;margin:16px 0;padding:8px;border-radius:10px}
+.msg.mine{background:var(--ink);color:#fff}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cell{aspect-ratio:1;font:800 clamp(2.5rem,16vw,4rem)/1 Cairo,sans-serif;border:2px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer}
+.cell:disabled{cursor:default}
+.cell.x{color:var(--x)}.cell.o{color:var(--o)}
+.cell.win{background:#fff3b0}
+#game .btn{display:block;margin:20px auto 0}
+</style>
+</head>
+<body>
+<main>
+  <section id="home">
+    <h1>ألعاب ثنائية</h1>
+    <p class="sub">العب مع صديقك برابط واحد، بدون حساب.</p>
+    <label for="name">اسمك</label>
+    <input id="name" maxlength="14" placeholder="مثال: يونس" autocomplete="off">
+    <label>اختر لعبة وأنشئ غرفة</label>
+    <div class="games">
+      <button class="game" data-game="xo"><b>XO</b><span>إنشاء غرفة</span></button>
+      <button class="game" disabled><b>سودوكو</b><span>قريبًا</span></button>
+    </div>
+    <label for="join">أو انضم بكود صديقك</label>
+    <div class="row">
+      <input id="join" maxlength="4" placeholder="ABCD" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em">
+      <button class="btn" id="joinBtn">انضم</button>
+    </div>
+    <p id="err" role="alert"></p>
+  </section>
+
+  <section id="room" class="hidden">
+    <div class="top">
+      <span class="chip" id="code"></span>
+      <div class="row">
+        <button class="btn ghost" id="copy">نسخ الرابط</button>
+        <button class="btn ghost" id="leave">خروج</button>
+      </div>
+    </div>
+    <div id="wait" class="wait hidden">
+      <h2>في انتظار صديقك…</h2>
+      <p>أرسل له الكود أو اضغط «نسخ الرابط» وأرسله له.</p>
+    </div>
+    <div id="game"></div>
+  </section>
+</main>
+
+<script type="module">
+import * as R from "./js/rooms.js";
+import xo from "./js/games/xo.js";
+
+const G = { xo };
+const $ = (s) => document.querySelector(s);
+const nameEl = $("#name"), errEl = $("#err");
+let code = null, unsub = null;
+
+nameEl.value = localStorage.getItem("name") || "";
+const myName = () => {
+  const n = nameEl.value.trim().slice(0, 14) || "لاعب";
+  localStorage.setItem("name", n);
+  return n;
+};
+const show = (id) => { $("#home").classList.toggle("hidden", id !== "home"); $("#room").classList.toggle("hidden", id !== "room"); };
+
+function enter(c) {
+  code = c;
+  errEl.textContent = "";
+  history.replaceState(null, "", "?room=" + c);
+  $("#code").textContent = c;
+  show("room");
+  unsub = R.watch(c, render);
+}
+
+function leave(msg) {
+  if (unsub) unsub();
+  unsub = null; code = null;
+  history.replaceState(null, "", location.pathname);
+  show("home");
+  errEl.textContent = msg || "";
+}
+
+function render(r) {
+  if (!r) return leave("هذه الغرفة لم تعد موجودة");
+  const waiting = !r.guest;
+  $("#wait").classList.toggle("hidden", !waiting);
+  $("#game").classList.toggle("hidden", waiting);
+  if (!waiting) G[r.game].render($("#game"), r, R.role(code), { patch: (o) => R.patch(code, o) });
+}
+
+async function create(game) {
+  try { enter(await R.createRoom(game, myName(), G[game].init())); }
+  catch (e) { errEl.textContent = "تعذّر إنشاء الغرفة. تأكد من الاتصال ومن قواعد Firebase."; }
+}
+
+async function join(c) {
+  c = c.trim().toUpperCase();
+  if (c.length !== 4) { errEl.textContent = "الكود مكوّن من 4 حروف"; return; }
+  try { await R.joinRoom(c, myName()); enter(c); }
+  catch (e) {
+    errEl.textContent = e.message === "notfound" ? "لا توجد غرفة بهذا الكود"
+      : e.message === "full" ? "الغرفة ممتلئة" : "تعذّر الانضمام. تأكد من الاتصال.";
+  }
+}
+
+document.querySelectorAll(".game[data-game]").forEach((b) => b.onclick = () => create(b.dataset.game));
+$("#joinBtn").onclick = () => join($("#join").value);
+$("#join").onkeydown = (e) => e.key === "Enter" && join(e.target.value);
+$("#leave").onclick = () => leave();
+$("#copy").onclick = async (e) => {
+  try { await navigator.clipboard.writeText(location.origin + location.pathname + "?room=" + code); e.target.textContent = "تم النسخ"; }
+  catch { e.target.textContent = "انسخ من شريط العنوان"; }
+  setTimeout(() => (e.target.textContent = "نسخ الرابط"), 2000);
+};
+
+// فتح رابط غرفة: العودة مباشرة إن كنت فيها، أو تجهيز خانة الكود للانضمام
+const p = (new URLSearchParams(location.search).get("room") || "").toUpperCase();
+if (p) {
+  if (R.role(p)) enter(p);
+  else { $("#join").value = p; errEl.textContent = "أدخل اسمك ثم اضغط «انضم»"; }
+}
+</script>
+</body>
+</html>
