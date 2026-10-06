@@ -24,7 +24,7 @@ export default {
       <div class="score"><b class="x">${esc(room.host.name)} (X): ${s.scores.host}</b><b class="o">${esc(room.guest.name)} (O): ${s.scores.guest}</b></div>
       <p class="msg ${mine ? "mine" : ""}">${msg}</p>
       <div class="board">${cells}</div>
-      ${done ? '<button class="btn" id="again">العب مرة أخرى</button>' : ""}`;
+      ${done && me !== "spec" ? '<button class="btn" id="again">العب مرة أخرى</button>' : ""}`;
 
     el.querySelector(".board").onclick = (e) => {
       const i = e.target.dataset.i;
