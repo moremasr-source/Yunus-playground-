@@ -77,6 +77,7 @@ select{width:100%;font:inherit;padding:11px;border:2px solid var(--line);border-
       <button class="game" data-game="sudoku" data-mode="shared"><b>سودوكو مشتركة</b><span>نفس اللوحة بالنقاط</span></button>
       <button class="game" data-game="numberRush"><b>تجميع الأرقام</b><span>سباق الأرقام السريع (1-16)</span></button>
       <button class="game" data-game="balloonRace"><b>صراع البالونات</b><span>فجّر بالوناتك المخصصة بأسرع وقت</span></button>
+      <button class="game" data-game="migration"><b>هجرة الطيور</b><span>تحدي التركيز والانتباه السريع</span></button>
     </div>
     <label for="diff">صعوبة السودوكو</label>
     <select id="diff"><option value="easy">سهل</option><option value="medium" selected>متوسط</option><option value="hard">صعب</option></select>
@@ -114,9 +115,10 @@ import xo from "./js/games/xo.js";
 import sudoku from "./js/games/sudoku.js";
 import color from "./js/games/color-game.js";
 import numberRush from "./js/games/number-rush.js";
-  import balloonRace from "./js/games/balloon-game.js";
+import balloonRace from "./js/games/balloon-game.js";
+import migration from "./js/games/migration.js";
   
-const G = { xo, sudoku, color, numberRush, balloonRace };
+const G = { xo, sudoku, color, numberRush, balloonRace, migration };
 const $ = (s) => document.querySelector(s);
 const nameEl = $("#name"), errEl = $("#err");
 let code = null, unsub = null, unPres = null, prev = "", touched = 0, ac = null;
