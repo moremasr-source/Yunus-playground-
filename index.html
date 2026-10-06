@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ألعاب ثنائية 2</title>
+<title>ألعاب ثنائية</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap">
 <style>
 :root{--bg:#eaf0f6;--ink:#17283d;--card:#fff;--line:#c6d3e1;--x:#d9482b;--o:#14808a;--mut:#5d6f84}
@@ -62,14 +62,15 @@ input:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
 </script>
 <main>
   <section id="home">
-    <h1>ألعاب ثنائية 2</h1>
+    <h1>ألعاب ثنائية</h1>
     <p class="sub">العب مع صديقك برابط واحد، بدون حساب.</p>
     <label for="name">اسمك</label>
     <input id="name" maxlength="14" placeholder="مثال: يونس" autocomplete="off">
     <label>اختر لعبة وأنشئ غرفة</label>
     <div class="games">
       <button class="game" data-game="xo"><b>XO</b><span>إنشاء غرفة</span></button>
-      <button class="game" disabled><b>سودوكو</b><span>قريبًا</span></button>
+      <button class="game" data-game="sudoku" data-mode="race"><b>سودوكو سباق</b><span>من يكمل أولًا</span></button>
+      <button class="game" data-game="sudoku" data-mode="shared"><b>سودوكو مشتركة</b><span>نفس اللوحة بالنقاط</span></button>
     </div>
     <label for="join">أو انضم بكود صديقك</label>
     <div class="row">
@@ -98,8 +99,9 @@ input:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
 <script type="module">
 import * as R from "./js/rooms.js";
 import xo from "./js/games/xo.js";
+import sudoku from "./js/games/sudoku.js";
 
-const G = { xo };
+const G = { xo, sudoku };
 const $ = (s) => document.querySelector(s);
 const nameEl = $("#name"), errEl = $("#err");
 let code = null, unsub = null;
@@ -137,8 +139,8 @@ function render(r) {
   if (!waiting) G[r.game].render($("#game"), r, R.role(code), { patch: (o) => R.patch(code, o) });
 }
 
-async function create(game) {
-  try { enter(await R.createRoom(game, myName(), G[game].init())); }
+async function create(game, mode) {
+  try { enter(await R.createRoom(game, myName(), G[game].init(mode))); }
   catch (e) { errEl.textContent = "تعذّر إنشاء الغرفة: " + (e.code || e.message); }
 }
 
@@ -152,7 +154,7 @@ async function join(c) {
   }
 }
 
-document.querySelectorAll(".game[data-game]").forEach((b) => b.onclick = () => create(b.dataset.game));
+document.querySelectorAll(".game[data-game]").forEach((b) => b.onclick = () => create(b.dataset.game, b.dataset.mode));
 $("#joinBtn").onclick = () => join($("#join").value);
 $("#join").onkeydown = (e) => e.key === "Enter" && join(e.target.value);
 $("#leave").onclick = () => leave();
