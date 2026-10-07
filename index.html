@@ -163,9 +163,9 @@ import balloonRace from "./js/games/balloon-game.js";
 import migration from "./js/games/migration.js";
 import memoryMatrix from "./js/games/memory-matrix.js";
 import oddOneOut from "./js/games/odd-one-out.js"; 
-
+import reverseMemory from "./js/games/reverse-memory.js";
   
-const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix, oddOneOut };
+const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix, oddOneOut, reverseMemory };
 // قائمة الألعاب: لإضافة لعبة جديدة أضف سطرًا هنا وسطر الاستيراد أعلاه
 const LIST = [
   { g: "xo", i: "⭕", t: "XO", d: "الكلاسيكية بالدور", c: "#e8475b" },
@@ -176,6 +176,7 @@ const LIST = [
   { g: "balloonRace", i: "🎈", t: "صراع البالونات", d: "فجّر بالوناتك بأسرع وقت", c: "#ec4899" },
   { g: "migration", i: "🐦", t: "هجرة الطيور", d: "تحدي التركيز والانتباه", c: "#0ea5e9" },
   { g: "oddOneOut", i: "🔍", t: "العنصر المختلف", d: "جد الشكل الشاذ بأسرع وقت", c: "#06b6d4" },
+  { g: "reverseMemory", i: "🔄", t: "الذاكرة العكسية", d: "تذكر النمط وأدخله بالعكس تماماً", c: "#f97316" },
   { g: "memoryMatrix", i: "🧠", t: "ماتريكس الذاكرة", d: "اختبر ذاكرتك المكانية", c: "#16a34a" }
 ];
 const $ = (s) => document.querySelector(s);
