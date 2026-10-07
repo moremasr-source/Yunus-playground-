@@ -1,15 +1,12 @@
 import { now } from "../rooms.js";
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const DUR = 60000, LEAD = 4000, LOCK = 400; // وقت أطول قليلاً للاستراتيجية (60 ثانية)
+const DUR = 90000, LEAD = 4000; // زيادة وقت المعركة قليلاً لأنها بنظام الأدوار
 
-// مولد عشوائي ثابت للبذور
 function mul(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-// توليد مواقع السفن بناءً على البذرة ودور اللاعب (شبكة 5×5 تحتوي على سفينتين بطول 2 و 3 مربعات مثلاً، أو توزيع 4 سفن فردية لتكون أسرع)
 function getPlayerShips(seed, roleRole) {
   const r = mul(seed * 313 + (roleRole === "host" ? 11 : 99));
-  // لنختر 4 خلايا سفن عشوائية وثابتة لكل لاعب من أصل 25 خلية (شبكة 5x5)
   let ships = [];
   while (ships.length < 4) {
     let cell = (r() * 25) | 0;
@@ -29,48 +26,42 @@ const CSS = `.bs{text-align:center}
 .bs-cell{aspect-ratio:1;background:#334155;border:1.5px solid var(--ink);border-radius:8px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:manipulation;transition:all .15s ease}
 .bs-cell:hover:not(:disabled){background:#475569;transform:scale(1.05)}
 .bs-cell:active:not(:disabled){transform:scale(.95)}
-.bs-cell.hit{background:#ef4444;color:#fff} /* إصابة ناجحة */
-.bs-cell.miss{background:#64748b;color:#cbd5e1} /* ضربة في الماء */
-.bs-cell.ship{background:#38bdf8} /* سفنك الخاصة */
-.c-stats{display:flex;justify-content:space-between;font-weight:800;font-size:1.1rem}
-@keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-5px)}100%{transform:translateX(0)}}
-.shake{animation:shake .3s}`;
+.bs-cell.hit{background:#ef4444;color:#fff}
+.bs-cell.miss{background:#64748b;color:#cbd5e1}
+.bs-cell.ship{background:#38bdf8}
+.c-stats{display:flex;justify-content:space-between;font-weight:800;font-size:1.1rem}`;
 
 if (!document.getElementById("bs-css")) { const st = document.createElement("style"); st.id = "bs-css"; st.textContent = CSS; document.head.append(st); }
 
-let cur = null, lastStart = 0, lockUntil = 0, starting = false, tickId = null;
+let cur = null, lastStart = 0, starting = false, tickId = null;
 const phase = (s) => { const t = now(); return !s.startAt ? "wait" : t < s.startAt ? "count" : t < s.startAt + DUR ? "play" : "end"; };
 
 function fire(cellIndex) {
   const { room: r, me, api } = cur, s = r.state;
-  if (me === "spec" || phase(s) !== "play" || Date.now() < lockUntil) return;
+  if (me === "spec" || phase(s) !== "play") return;
+
+  // التحقق مما إذا كان الدور دور اللاعب الحالي
+  if (s.turn !== me) return;
 
   const op = me === "host" ? "guest" : "host";
-  // التأكد من أن اللاعب لم يقصف هذه الخلية من قبل
   const shots = s.shots && s.shots[me] ? s.shots[me] : {};
   if (shots[cellIndex] !== undefined) return; // تم قصفها مسبقاً
 
-  // التحقق مما إذا كانت الخلية تحتوي على سفينة للخصم
   const opShips = getPlayerShips(s.seed, op);
   const isHit = opShips.includes(cellIndex);
 
-  // تحديث الطلقات في الحالة المشتركة
   const updatedShots = { ...shots, [cellIndex]: isHit ? "hit" : "miss" };
-  
-  // حساب عدد الإصابات الجديدة للخصم لمعرفة الفائز (4 سفن إجمالاً)
   let hitsCount = s.scores[me] || 0;
-  if (isHit) {
-    hitsCount++;
-  }
+  if (isHit) hitsCount++;
+
+  // قاعدة المعركة البحرية الكلاسيكية: إذا أصاب اللاعب سفينة، يحصل على طلقة أخرى، وإن أخطأ ينتقل الدور للخصم
+  const nextTurn = isHit ? me : op;
 
   api.patch({
     [`state/shots/${me}`]: updatedShots,
-    [`state/scores/${me}`]: hitsCount
+    [`state/scores/${me}`]: hitsCount,
+    [`state/turn`]: nextTurn
   });
-
-  if (!isHit) {
-    lockUntil = Date.now() + LOCK; // عقوبة خطأ بسيطة أو تأخير تفاعلي عند الخطأ
-  }
   tick();
 }
 
@@ -81,35 +72,38 @@ function tick() {
   const hs = s.scores.host || 0, gs = s.scores.guest || 0, end = (s.startAt || 0) + DUR;
 
   q("bs-info").innerHTML = spec
-    ? `<b class="x">${esc(r.host.name)}: ${hs}/4 إصابات</b><b class="o">${esc(r.guest.name)}: ${gs}/4 إصابات</b>`
+    ? `<b class="x">${esc(r.host.name)}: ${hs}/4</b><b class="o">${esc(r.guest.name)}: ${gs}/4</b>`
     : `<b class="o">إصاباتك: ${s.scores[me] || 0}/4</b><b class="x">إصابات الخصم: ${s.scores[op] || 0}/4</b>`;
 
   const rem = ph === "play" ? (end - t) / 1000 : ph === "end" ? 0 : DUR / 1000;
   q("bs-time").textContent = Math.max(0, rem).toFixed(1);
   q("bs-bar").style.width = Math.max(0, (rem / (DUR / 1000))) * 100 + "%";
 
-  const msgEl = q("bs-msg"); let msg = "اضغط على لوحة الخصم لقصف إحداثيات سفنه!";
+  const msgEl = q("bs-msg"); let msg = "";
   let final = false;
 
   if (ph === "wait") { msg = "جارٍ تجهيز الأسطول البحري…"; }
   else if (ph === "count") { msg = `استعد! تبدأ المعركة خلال ${Math.ceil((s.startAt - t) / 1000)} ثوانٍ`; }
   else if (ph === "play") {
-    if (spec) msg = "وضع المتفرج - تتبع المعركة البحرية";
-    else if (hs >= 4 || gs >= 4) {
-      // انتهت بتدمير الأسطول قبل الوقت
-      final = true;
+    if (spec) {
+      msg = `دور اللاعب: ${esc(r[s.turn].name)}`;
+    } else {
+      if (s.turn === me) {
+        msg = "🎯 دورك الآن! اضغط على لوحة الخصم للقصف";
+      } else {
+        msg = `⏳ دور ${esc(r[op].name)}، انتظر ضربته...`;
+      }
     }
   } else {
     if (t < end + 1500 && hs < 4 && gs < 4) {
       msg = "جارٍ احتساب نتيجة المعركة…";
     } else {
       final = true;
-      const win = hs > gs ? "host" : gs > hs ? "guest" : (hs === gs ? null : (hs > gs ? "host" : "guest"));
-      msg = (!win ? "تعادل!" : win === me ? "سحقت أسطول خصمك وفزت بالمعركة! 🚢💥" : `فاز ${esc(r[win].name)} في المعركة!`) + ` (${hs} مقابل ${gs})`;
+      const win = hs > gs ? "host" : gs > hs ? "guest" : null;
+      msg = (!win ? "تعادل!" : win === me ? "فزت في المعركة البحرية!" : `فاز ${esc(r[win].name)}`) + ` (${hs} مقابل ${gs})`;
     }
   }
 
-  // إذا وصل أحد اللاعبين لـ 4 إصابات يعلن الفوز فوراً
   if (!final && (hs >= 4 || gs >= 4)) {
     final = true;
     const win = hs >= 4 ? "host" : "guest";
@@ -119,12 +113,10 @@ function tick() {
   msgEl.innerHTML = msg;
   msgEl.className = "msg" + (final ? " mine" : "");
 
-  // تحديث لوحات اللعب مرئياً للمستخدم إذا لم يكن متفرجاً
   if (!spec && ph === "play") {
     const myShots = s.shots && s.shots[me] ? s.shots[me] : {};
     const myShips = getPlayerShips(s.seed, me);
 
-    // تحديث لوحة استهداف الخصم (يمين)
     const targetGrid = q("bs-target-grid");
     if (targetGrid) {
       targetGrid.querySelectorAll(".bs-cell").forEach((cell, idx) => {
@@ -136,7 +128,6 @@ function tick() {
       });
     }
 
-    // تحديث لوحة سفونك الخاصة (يسار) لرؤية أين أصابك الخصم
     const opShots = s.shots && s.shots[op] ? s.shots[op] : {};
     const fleetGrid = q("bs-fleet-grid");
     if (fleetGrid) {
@@ -181,7 +172,6 @@ function build(el, room) {
     <button class="btn hidden" id="bs-again" style="margin-top:15px;width:100%">معركة جديدة</button>
   </div>`;
 
-  // التفاعل مع لوحة استهداف الخصم فقط
   el.querySelector("#bs-target-grid").onpointerdown = (e) => {
     const btn = e.target.closest(".bs-cell");
     if (btn && phase(room.state) === "play") {
@@ -198,7 +188,8 @@ const game = {
   init: () => ({ 
     seed: (Math.random() * 1e6) | 0, 
     scores: { host: 0, guest: 0 },
-    shots: { host: {}, guest: {} }
+    shots: { host: {}, guest: {} },
+    turn: "host" // المضيف يبدأ اللعب أولاً
   }),
   render(el, room, me, api) {
     const s = room.state, st = s.startAt || 0;
