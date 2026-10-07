@@ -165,8 +165,9 @@ import memoryMatrix from "./js/games/memory-matrix.js";
 import oddOneOut from "./js/games/odd-one-out.js"; 
 import reverseMemory from "./js/games/reverse-memory.js";
 import battleship from "./js/games/battleship.js";
+import logicalMatrix from "./js/games/logical-matrix.js";
   
-const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix, oddOneOut, reverseMemory, battleship };
+const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix, oddOneOut, reverseMemory, battleship, logicalMatrix  };
 // قائمة الألعاب: لإضافة لعبة جديدة أضف سطرًا هنا وسطر الاستيراد أعلاه
 const LIST = [
   { g: "xo", i: "⭕", t: "XO", d: "الكلاسيكية بالدور", c: "#e8475b" },
@@ -178,7 +179,8 @@ const LIST = [
   { g: "migration", i: "🐦", t: "هجرة الطيور", d: "تحدي التركيز والانتباه", c: "#0ea5e9" },
   { g: "oddOneOut", i: "🔍", t: "العنصر المختلف", d: "جد الشكل الشاذ بأسرع وقت", c: "#06b6d4" },
   { g: "reverseMemory", i: "🔄", t: "الذاكرة العكسية", d: "تذكر النمط وأدخله بالعكس تماماً", c: "#f97316" },
-  { g: "memoryMatrix", i: "🧠", t: "ماتريكس الذاكرة", d: "اختبر ذاكرتك المكانية", c: "#16a34a" }
+  { g: "memoryMatrix", i: "🧠", t: "ماتريكس الذاكرة", d: "اختبر ذاكرتك المكانية", c: "#16a34a" },
+  { g: "logicalMatrix", i: "🔗", t: "الروابط الخفية", d: "اكتشف التصنيفات والروابط المشتركة", c: "#14b8a6" },
   { g: "battleship", i: "🚢", t: "المعركة البحرية", d: "اقصف أسطول خصمك ودمر سفنه", c: "#2563eb" },
 ];
 const $ = (s) => document.querySelector(s);
