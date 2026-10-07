@@ -20,11 +20,11 @@ const newCode = () => Array.from({ length: 4 }, () => LETTERS[(Math.random() * L
 export const role = (c) => sessionStorage.getItem("role:" + c);
 const saveRole = (c, r) => sessionStorage.setItem("role:" + c, r);
 
-export async function createRoom(game, name, state) {
+export async function createRoom(game, name, state, bot) {
   for (;;) {
     const c = newCode();
     if (!(await get(room(c))).exists()) {
-      await set(room(c), { game, createdAt: Date.now(), host: { name }, guest: null, state });
+      await set(room(c), { game, createdAt: Date.now(), host: { name }, guest: bot ? { name: bot === "train" ? "🎯 التدريب" : "🤖 روبوت " + { easy: "سهل", medium: "متوسط", hard: "صعب" }[bot], bot } : null, state });
       saveRole(c, "host");
       return c;
     }
@@ -64,3 +64,14 @@ export function present(c, name) {
 }
 // خروج: المنشئ يحذف الغرفة، وغيره يزيل حضوره فقط
 export const leaveRoom = (c) => (role(c) === "host" ? remove(room(c)) : remove(mine(c)));
+
+// المتصلون الآن (حضور كل تبويب) وإجمالي الزوار (يُحسب مرة لكل متصفح). يحتاجان قواعد Firebase الإضافية.
+export function lobbyStats(cb) {
+  const st = { online: 0, visitors: 0 }, me = ref(db, "presence/" + sid), none = () => {};
+  const u1 = onValue(ref(db, ".info/connected"), (s) => { if (s.val()) { onDisconnect(me).remove(); set(me, true).catch(none); } });
+  const u2 = onValue(ref(db, "presence"), (s) => { st.online = s.exists() ? Object.keys(s.val()).length : 0; cb({ ...st }); }, none);
+  const u3 = onValue(ref(db, "stats/visitors"), (s) => { st.visitors = s.val() || 0; cb({ ...st }); }, none);
+  if (!localStorage.getItem("counted"))
+    runTransaction(ref(db, "stats/visitors"), (v) => (v || 0) + 1).then(() => localStorage.setItem("counted", "1")).catch(none);
+  return () => { u1(); u2(); u3(); };
+}
