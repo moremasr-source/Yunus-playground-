@@ -122,7 +122,7 @@ function tick() {
 }
 
 function build(el, room) {
-  el.dataset.rc = String(room.createdAt);
+  el.dataset.rc = room.createdAt + ":" + room.state.seed;
   const balloons = getBalloons(room.state.seed);
 
   el.innerHTML = `<div class="bg-game">
@@ -164,7 +164,7 @@ const game = {
       api.patch({ "state/startAt": now() + LEAD }); 
     }
 
-    if (!el.querySelector(".bg-game") || el.dataset.rc !== String(room.createdAt)) {
+    if (!el.querySelector(".bg-game") || el.dataset.rc !== room.createdAt + ":" + s.seed) {
       build(el, room);
     }
     
