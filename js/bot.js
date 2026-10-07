@@ -1,5 +1,6 @@
 import { now } from "./rooms.js";
 import { getBalloons } from "./games/balloon-game.js";
+import { codeOf, feedback, MAXG } from "./games/mastermind.js";
 
 // الروبوت يلعب دور "الضيف" من جهاز المنشئ، بنفس الكتابات التي يكتبها لاعب حقيقي.
 const DUR = 30000;
@@ -9,7 +10,7 @@ const jit = (ms) => ms * (0.7 + Math.random() * 0.6);
 // الفاصل (بالملّي ثانية) بين كل نقطة يحرزها الروبوت: [سهل، متوسط، صعب]. قلّله ليصبح أسرع.
 const PACE = {
   color: [2200, 1300, 800], migration: [1700, 1050, 680], memoryMatrix: [9000, 6000, 4200],
-  numberRush: [1900, 1400, 1000], balloonRace: [1400, 900, 550], sudoku: [7000, 4500, 2800]
+  numberRush: [1900, 1400, 1000], balloonRace: [1400, 900, 550], sudoku: [7000, 4500, 2800], mastermind: [9000, 6000, 3500]
 };
 
 function due(c, t) {
@@ -20,6 +21,9 @@ function due(c, t) {
 }
 const live = (s, t) => s.startAt && t >= s.startAt && t < Math.min(s.startAt + DUR, ...Object.values(s.finish || {}));
 const score = (r, p, c) => { const t = now(); if (live(r.state, t) && due(c, t)) p({ "state/scores/guest": (r.state.scores.guest || 0) + 1 }); };
+
+// كل الشفرات الممكنة في فك الشفرة (4 ألوان مختلفة من 6)
+const ALL = (() => { const out = []; const go = (c) => { if (c.length === 4) return out.push(c); for (let d = 0; d < 6; d++) if (!c.includes(d)) go(c + d); }; go(""); return out; })();
 
 // ---- XO ----
 const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
@@ -53,6 +57,18 @@ function xoMove(b, lvl) {
 
 const BOTS = {
   color: score, migration: score, memoryMatrix: score,
+
+  // يخمّن شفرة متسقة مع كل ما عرفه حتى الآن (السهل يخمّن عشوائيًا نصف المرات)
+  mastermind: (r, p, c) => {
+    const s = r.state, mine = s.g && s.g.guest ? s.g.guest.split(",") : [];
+    if (s.winner || mine.length >= MAXG || !due(c, now())) return;
+    const code = codeOf(s.seed);
+    const pool = ALL.filter((g) => mine.every((h) => { const a = feedback(h, g), b = feedback(h, code); return a.b === b.b && a.w === b.w; }));
+    const g = c.lvl === 0 && Math.random() < 0.5 ? pick(ALL) : pick(pool.length ? pool : ALL);
+    const q = { "state/g/guest": mine.concat(g).join(",") };
+    if (g === code) q["state/winner"] = "guest";
+    p(q);
+  },
 
   numberRush: (r, p, c) => {
     const s = r.state, t = now();
