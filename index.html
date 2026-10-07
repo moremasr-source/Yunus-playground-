@@ -36,6 +36,11 @@ button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
 .link{background:none;border:0;color:var(--o);font:inherit;font-weight:700;cursor:pointer;margin-top:14px;text-decoration:underline}
 #err{color:var(--x);min-height:1.5em;margin:12px 0 0;font-weight:600}
 .hidden{display:none!important}
+.stats{margin:-8px 0 14px;font-size:.85rem;color:var(--mut);font-weight:600}
+.best{font-size:.8rem;font-weight:700;color:var(--o);margin-top:2px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:#e6ebf5;padding:5px;border-radius:16px}
+.seg button{font:inherit;font-weight:700;border:0;background:transparent;padding:10px 4px;border-radius:12px;cursor:pointer;color:var(--mut)}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(20,24,43,.12)}
 .invite{background:linear-gradient(135deg,rgba(18,165,148,.14),rgba(59,130,246,.14));border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:6px}
 .invite p{margin:0;line-height:1.7}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;padding:10px 12px}
@@ -88,6 +93,7 @@ if (/[?&]debug/.test(location.search)) {
   <section id="home">
     <div class="brand"><div class="logo">🎮</div><h1>ألعاب ثنائية</h1></div>
     <p class="sub" id="homeSub">العب مع صديقك برابط واحد، بدون حساب.</p>
+    <p class="stats hidden" id="stats"></p>
 
     <div id="invite" class="invite hidden">
       <h2>🎉 دعاك صديقك للعب!</h2>
@@ -99,7 +105,11 @@ if (/[?&]debug/.test(location.search)) {
     <button class="btn big hidden" id="invJoin" style="margin-top:14px">انضم إلى الغرفة</button>
 
     <div id="create">
-      <label>اختر لعبة وأنشئ غرفة</label>
+      <label>مع من تلعب؟</label>
+      <div class="seg" id="seg"><button class="on" data-m="friend">👥 صديق</button><button data-m="bot">🤖 الروبوت</button><button data-m="train">🎯 تدريب</button></div>
+      <div id="botlvlbox" class="hidden"><label for="botlvl">مستوى الروبوت</label>
+        <select id="botlvl"><option value="easy">سهل</option><option value="medium" selected>متوسط</option><option value="hard">صعب</option></select></div>
+      <label id="pickLbl">اختر لعبة وأنشئ غرفة</label>
       <div class="games" id="homeGames"></div>
       <label for="diff">صعوبة السودوكو</label>
       <select id="diff"><option value="easy">سهل</option><option value="medium" selected>متوسط</option><option value="hard">صعب</option></select>
@@ -162,6 +172,7 @@ import numberRush from "./js/games/number-rush.js";
 import balloonRace from "./js/games/balloon-game.js";
 import migration from "./js/games/migration.js";
 import memoryMatrix from "./js/games/memory-matrix.js";
+import { startBot } from "./js/bot.js";
 import oddOneOut from "./js/games/odd-one-out.js"; 
 import reverseMemory from "./js/games/reverse-memory.js";
 import battleship from "./js/games/battleship.js";
@@ -170,9 +181,9 @@ import logicalMatrix from "./js/games/logical-matrix.js";
 const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix, oddOneOut, reverseMemory, battleship, logicalMatrix  };
 // قائمة الألعاب: لإضافة لعبة جديدة أضف سطرًا هنا وسطر الاستيراد أعلاه
 const LIST = [
-  { g: "xo", i: "⭕", t: "XO", d: "الكلاسيكية بالدور", c: "#e8475b" },
+  { g: "xo", i: "⭕", t: "XO", d: "الكلاسيكية بالدور", c: "#e8475b", s: "wins" },
   { g: "color", i: "🎨", t: "تحدي الألوان", d: "30 ثانية، الأكثر صحة يفوز", c: "#f59e0b" },
-  { g: "sudoku", m: "race", i: "🧩", t: "سودوكو سباق", d: "من يكمل أولًا", c: "#3b82f6" },
+  { g: "sudoku", m: "race", i: "🧩", t: "سودوكو سباق", d: "من يكمل أولًا", c: "#3b82f6", s: "wins" },
   { g: "sudoku", m: "shared", i: "🤝", t: "سودوكو مشتركة", d: "نفس اللوحة بالنقاط", c: "#12a594" },
   { g: "numberRush", i: "🔢", t: "تجميع الأرقام", d: "سباق الأرقام السريع (1-16)", c: "#8b5cf6" },
   { g: "balloonRace", i: "🎈", t: "صراع البالونات", d: "فجّر بالوناتك بأسرع وقت", c: "#ec4899" },
@@ -185,7 +196,7 @@ const LIST = [
 ];
 const $ = (s) => document.querySelector(s);
 const nameEl = $("#name"), errEl = $("#err");
-let code = null, unsub = null, unPres = null, prev = "", touched = 0, ac = null, shown = "", inv = null, tt;
+let code = null, unsub = null, unPres = null, prev = "", touched = 0, ac = null, shown = "", inv = null, tt, playMode = "friend", lastRoom = null, stopBot = null;
 
 nameEl.value = localStorage.getItem("name") || "";
 const myName = () => { const n = nameEl.value.trim().slice(0, 14) || "لاعب"; localStorage.setItem("name", n); return n; };
@@ -193,8 +204,11 @@ const link = () => location.origin + location.pathname + "?room=" + code;
 const show = (id) => { $("#home").classList.toggle("hidden", id !== "home"); $("#room").classList.toggle("hidden", id !== "room"); };
 function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("on"), 1800); }
 
+// أفضل نتيجة لي (محفوظة في هذا المتصفح): نقاط للألعاب، وعدد انتصارات لـ XO وسودوكو السباق
+const bestKey = (x) => "best:" + x.g + (x.m ? ":" + x.m : "");
+const bestOf = (x) => +localStorage.getItem(bestKey(x)) || 0;
 function cards(box, pick) {
-  box.innerHTML = LIST.map((x, k) => `<button class="game" data-k="${k}" style="--tint:${x.c}"><span class="ico">${x.i}</span><b>${x.t}</b><span class="d">${x.d}</span></button>`).join("");
+  box.innerHTML = LIST.map((x, k) => `<button class="game" data-k="${k}" style="--tint:${x.c}"><span class="ico">${x.i}</span><b>${x.t}</b><span class="d">${x.d}</span>${bestOf(x) ? `<span class="best">🏆 ${x.s === "wins" ? "انتصاراتك" : "أفضل نتيجة"}: ${bestOf(x)}</span>` : ""}</button>`).join("");
   box.onclick = (e) => { const b = e.target.closest(".game"); if (b) pick(LIST[b.dataset.k]); };
 }
 
@@ -207,20 +221,25 @@ function enter(c) {
   show("room");
   unsub = R.watch(c, render);
   unPres = R.present(c, myName());
+  // الروبوت يعمل من جهاز المنشئ فقط، وبعد إنشاء الغرفة أو العودة إليها
+  stopBot = startBot(() => lastRoom, (o) => code && R.patch(code, o), () => R.role(code) === "host");
 }
 
 function leave(msg) {
   if (unsub) unsub();
   if (unPres) unPres();
-  unsub = unPres = null; code = null; prev = ""; shown = "";
+  if (stopBot) stopBot();
+  unsub = unPres = stopBot = lastRoom = null; code = null; prev = ""; shown = "";
   history.replaceState(null, "", location.pathname);
   normal();
+  cards($("#homeGames"), homePick);
   show("home");
   errEl.textContent = msg || "";
 }
 
 function render(r) {
   if (!r) return leave("هذه الغرفة لم تعد موجودة");
+  lastRoom = r;
   const waiting = !r.guest;
   $("#wait").classList.toggle("hidden", !waiting);
   $("#game").classList.toggle("hidden", waiting);
@@ -228,23 +247,26 @@ function render(r) {
   const w = Object.values(r.spectators || {});
   $("#meta").textContent = (me === "spec" ? "أنت تشاهد المباراة. " : "") + (w.length ? `👁 ${w.length} يشاهدون: ${w.map((x) => x.name).join("، ")}` : "");
   $("#meta").classList.toggle("hidden", !$("#meta").textContent);
-  const gone = me !== "spec" && r.guest && on[me] && !on[op];
+  const gone = me !== "spec" && r.guest && !r.guest.bot && on[me] && !on[op];
   $("#offline").classList.toggle("hidden", !gone);
   if (gone) $("#offline").textContent = `${r[op].name} غير متصل حاليًا…`;
   $("#gameActions").classList.toggle("hidden", waiting || me === "spec");
   const t = LIST.find((x) => x.g === r.game && (!x.m || x.m === (r.state || {}).mode));
-  $("#gname").textContent = waiting || !t ? "" : `${t.i} ${t.t}`;
+  $("#gname").textContent = waiting || !t ? "" : `${t.i} ${t.t}` + (bestOf(t) ? ` · 🏆 ${bestOf(t)}` : "");
   if (r.game !== shown) { shown = r.game; $("#game").innerHTML = ""; $("#game").removeAttribute("data-rc"); prev = ""; }
   if (!waiting) {
     const sig = JSON.stringify(r.state);
     if (prev && sig !== prev && Date.now() - touched > 700) ping(); // تغيير من الطرف الآخر
     prev = sig;
-    G[r.game].render($("#game"), r, me, { patch: (o) => R.patch(code, o) });
+    G[r.game].render($("#game"), r, me, { patch: (o) => code && R.patch(code, o) });
   }
 }
 
 async function create(game, mode) {
-  try { enter(await R.createRoom(game, myName(), G[game].init(mode, $("#diff").value))); }
+  try {
+    const bot = playMode === "friend" ? null : playMode === "train" ? "train" : $("#botlvl").value;
+    enter(await R.createRoom(game, myName(), G[game].init(mode, $("#diff").value), bot));
+  }
   catch (e) { errEl.textContent = "تعذّر إنشاء الغرفة: " + (e.code || e.message); }
 }
 
@@ -275,7 +297,15 @@ function normal() {
   ["#create", "#joinbox", "#homeSub"].forEach((s) => $(s).classList.remove("hidden"));
 }
 
-cards($("#homeGames"), (x) => create(x.g, x.m));
+const homePick = (x) => create(x.g, x.m);
+cards($("#homeGames"), homePick);
+$("#seg").onclick = (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  playMode = b.dataset.m;
+  document.querySelectorAll("#seg button").forEach((x) => x.classList.toggle("on", x === b));
+  $("#botlvlbox").classList.toggle("hidden", playMode !== "bot");
+  $("#pickLbl").textContent = { friend: "اختر لعبة وأنشئ غرفة", bot: "اختر لعبة وتحدَّ الروبوت", train: "اختر لعبة للتدريب الفردي" }[playMode];
+};
 cards($("#pickGames"), pick);
 $("#joinBtn").onclick = () => join($("#join").value);
 $("#join").onkeydown = (e) => e.key === "Enter" && join(e.target.value);
@@ -293,6 +323,8 @@ $("#leave").onclick = async () => {
   if (unsub) unsub();
   if (unPres) unPres();
   unsub = unPres = null;
+  if (stopBot) stopBot();
+  stopBot = null;
   try { await R.leaveRoom(c); } catch (e) {}
   leave();
 };
@@ -315,6 +347,37 @@ function ping() {
 const snd = $("#snd"), updSnd = () => (snd.textContent = localStorage.getItem("mute") ? "🔇" : "🔊");
 snd.onclick = () => { localStorage.getItem("mute") ? localStorage.removeItem("mute") : localStorage.setItem("mute", "1"); updSnd(); };
 updSnd();
+
+// ---- أفضل نتيجة: نكتشف نهاية الجولة ونحفظ رقمك إن كان أفضل ----
+const DUR = 30000;
+function result(r, me) {
+  const s = r.state || {}, sc = s.scores || {};
+  if (r.game === "xo") return s.winner ? { key: "r" + s.round, win: s.winner === me } : null;
+  if (r.game === "sudoku") return s.mode === "race" ? (s.winner ? { key: s.puz, win: s.winner === me } : null) : (s.over ? { key: s.puz, score: sc[me] || 0 } : null);
+  const end = s.startAt ? Math.min(s.startAt + DUR, ...Object.values(s.finish || {})) + 1500 : 0; // نفس لحظة ظهور النتيجة النهائية
+  return end && R.now() > end ? { key: s.seed + ":" + s.startAt, score: sc[me] || 0 } : null;
+}
+function record(r) {
+  const me = R.role(code);
+  if (!r || !me || me === "spec") return;
+  const x = LIST.find((y) => y.g === r.game && (!y.m || y.m === (r.state || {}).mode)), res = x && result(r, me);
+  if (!res) return;
+  const rk = `rec:${code}:${r.game}:${res.key}`;
+  if (sessionStorage.getItem(rk)) return; // لا نحسب الجولة مرتين
+  sessionStorage.setItem(rk, "1");
+  const old = bestOf(x);
+  if (x.s === "wins") { if (res.win) { localStorage.setItem(bestKey(x), old + 1); toast(`🏆 انتصارك رقم ${old + 1}`); } }
+  else if (res.score > old) { localStorage.setItem(bestKey(x), res.score); toast(old ? `🎉 رقم قياسي جديد: ${res.score}` : `🏆 أول نتيجة لك: ${res.score}`); }
+  cards($("#pickGames"), pick);
+}
+setInterval(() => { if (code && lastRoom) record(lastRoom); }, 500);
+
+// ---- عدادات الصفحة الرئيسية ----
+R.lobbyStats((s) => {
+  const el = $("#stats");
+  el.textContent = [s.online ? `🟢 ${s.online} متصلون الآن` : "", s.visitors ? `👥 ${s.visitors} زائر حتى الآن` : ""].filter(Boolean).join(" · ");
+  el.classList.toggle("hidden", !el.textContent);
+});
 
 window.__ok = true;
 
