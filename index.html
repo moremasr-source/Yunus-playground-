@@ -3,112 +3,155 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3f5fb">
 <title>ألعاب ثنائية</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap">
 <style>
-:root{--bg:#eaf0f6;--ink:#17283d;--card:#fff;--line:#c6d3e1;--x:#d9482b;--o:#14808a;--mut:#5d6f84}
-*{box-sizing:border-box}
-body{margin:0;font-family:Cairo,system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
-main{max-width:460px;margin:0 auto;padding:24px 16px}
-h1{font-size:2rem;font-weight:800;margin:8px 0 4px}
-.sub{color:var(--mut);margin:0 0 24px}
-label{display:block;font-weight:600;margin:16px 0 6px}
-input{width:100%;font:inherit;padding:12px 14px;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
-input:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
+:root{--bg:#f3f5fb;--ink:#14182b;--card:#fff;--line:#dfe5f1;--x:#e8475b;--o:#12a594;--mut:#66708a;--r:18px;--sh:0 8px 24px rgba(20,24,43,.07)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:Cairo,system-ui,sans-serif;background:var(--bg) radial-gradient(800px 360px at 100% -10%,rgba(18,165,148,.16),transparent) no-repeat;color:var(--ink);min-height:100vh}
+main{max-width:480px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 16px max(28px,env(safe-area-inset-bottom))}
+.brand{display:flex;align-items:center;gap:12px;margin:6px 0 4px}
+.logo{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;font-size:1.6rem;background:linear-gradient(135deg,var(--o),#3b82f6);box-shadow:0 8px 18px rgba(18,165,148,.35)}
+h1{font-size:1.9rem;font-weight:800;margin:0}
+h2{margin:0 0 6px}
+.sub{color:var(--mut);margin:0 0 18px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:16px}
+label{display:block;font-weight:700;margin:18px 0 8px;font-size:.95rem}
+input,select{width:100%;font:inherit;padding:13px 15px;border:1.5px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus{outline:0;border-color:var(--o);box-shadow:0 0 0 4px rgba(18,165,148,.18)}
+button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
 .games{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.game{font:inherit;text-align:right;padding:16px;border:2px solid var(--ink);border-radius:14px;background:var(--card);color:var(--ink);cursor:pointer}
-.game b{display:block;font-size:1.3rem}
-.game span{color:var(--mut);font-size:.9rem}
-.game:disabled{border-style:dashed;border-color:var(--line);cursor:default;opacity:.7}
+.game{display:flex;flex-direction:column;gap:3px;min-height:130px;text-align:right;font:inherit;padding:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--card);color:var(--ink);cursor:pointer;box-shadow:var(--sh);transition:transform .15s,border-color .15s}
+.game:hover{transform:translateY(-3px);border-color:var(--tint)}
+.game:active{transform:scale(.97)}
+.ico{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:1.4rem;background:#eef2f7;background:color-mix(in srgb,var(--tint) 16%,#fff)}
+.game b{font-size:1.05rem;margin-top:6px}
+.game .d{color:var(--mut);font-size:.82rem;line-height:1.4}
 .row{display:flex;gap:8px}
-.btn{font:inherit;font-weight:600;padding:12px 18px;border:0;border-radius:10px;background:var(--ink);color:#fff;cursor:pointer;white-space:nowrap}
-.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
-#err{color:var(--x);min-height:1.5em;margin:12px 0 0}
+.btn{font:inherit;font-weight:700;padding:12px 18px;border:0;border-radius:14px;background:var(--ink);color:#fff;cursor:pointer;white-space:nowrap;transition:transform .1s}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+.btn.big{width:100%;padding:15px;font-size:1.1rem;background:linear-gradient(135deg,var(--o),#3b82f6)}
+.link{background:none;border:0;color:var(--o);font:inherit;font-weight:700;cursor:pointer;margin-top:14px;text-decoration:underline}
+#err{color:var(--x);min-height:1.5em;margin:12px 0 0;font-weight:600}
 .hidden{display:none!important}
-select{width:100%;font:inherit;padding:11px;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
-.top{flex-wrap:wrap}.top .row{flex-wrap:wrap}.top .btn{padding:8px 12px;font-size:.9rem}
-#offline{background:#fff3b0;border:2px solid var(--x);border-radius:10px;padding:8px 12px;font-weight:600}#meta{margin:0 0 12px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:16px}
-.chip{font-weight:800;letter-spacing:.25em;font-size:1.4rem;background:var(--ink);color:#fff;padding:4px 14px;border-radius:8px}
-.wait{text-align:center;padding:32px 8px}
-.wait p{color:var(--mut)}
+.invite{background:linear-gradient(135deg,rgba(18,165,148,.14),rgba(59,130,246,.14));border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:6px}
+.invite p{margin:0;line-height:1.7}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;padding:10px 12px}
+.chip{font-weight:800;letter-spacing:.3em;font-size:1.3rem;background:var(--ink);color:#fff;padding:6px 12px;border-radius:12px}
+.ib{width:42px;height:42px;border-radius:13px;border:1.5px solid var(--line);background:#fff;font-size:1.1rem;cursor:pointer}
+.ib:active{transform:scale(.93)}
+#offline{background:#fff6cf;border:1.5px solid #f0c93c;border-radius:14px;padding:9px 13px;font-weight:600;margin:0 0 10px}
+#meta{margin:0 0 10px;font-size:.9rem}
+.gtitle{font-weight:800;color:var(--mut);margin:2px 4px 8px}
+.wait{text-align:center;padding:28px 16px}
+.wait p{color:var(--mut);margin:0 0 14px}
+.bigcode{font-size:2.4rem;font-weight:800;letter-spacing:.35em;margin:6px 0 16px;padding-inline-start:.35em}
+.dots{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
+.dots i{width:10px;height:10px;border-radius:50%;background:var(--o);animation:pulse 1.2s infinite}
+.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,80%,100%{opacity:.25;transform:scale(.8)}40%{opacity:1;transform:scale(1.1)}}
+#game{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:16px}
+#game .btn{display:block;margin:20px auto 0}
+#gameActions{margin-top:14px;text-align:center}
 .score{display:flex;justify-content:space-between;gap:8px}
 .x{color:var(--x)}.o{color:var(--o)}
-.msg{text-align:center;font-size:1.4rem;font-weight:800;margin:16px 0;padding:8px;border-radius:10px}
+.msg{text-align:center;font-size:1.3rem;font-weight:800;margin:14px 0;padding:8px;border-radius:12px}
 .msg.mine{background:var(--ink);color:#fff}
 .board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.cell{aspect-ratio:1;font:800 clamp(2.5rem,16vw,4rem)/1 Cairo,sans-serif;border:2px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer}
+.cell{aspect-ratio:1;font:800 clamp(2.5rem,16vw,4rem)/1 Cairo,sans-serif;border:2px solid var(--line);border-radius:16px;background:#f8faff;cursor:pointer;box-shadow:0 3px 0 var(--line)}
 .cell:disabled{cursor:default}
 .cell.x{color:var(--x)}.cell.o{color:var(--o)}
 .cell.win{background:#fff3b0}
-#game .btn{display:block;margin:20px auto 0}
+.sheet{position:fixed;inset:0;background:rgba(20,24,43,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet-in{background:var(--bg);width:100%;max-width:480px;max-height:85vh;overflow:auto;border-radius:24px 24px 0 0;padding:18px 16px max(20px,env(safe-area-inset-bottom));animation:up .25s ease}
+.sheet-in h3{margin:0 0 12px}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s;z-index:30;font-weight:600}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<div id="diag" class="hidden" style="background:#fff3b0;border-bottom:2px solid #d9482b;padding:10px 14px;font-size:.9rem;white-space:pre-line"></div>
+<div id="diag" class="hidden" style="background:#fff3b0;padding:10px 14px;font-size:.9rem;white-space:pre-line"></div>
 <script>
-// شريط تشخيص: يظهر فقط إذا فشل تحميل ملفات اللعبة أو حدث خطأ
-(function () {
+// شريط التشخيص لا يظهر إلا إذا أضفت ?debug إلى الرابط
+if (/[?&]debug/.test(location.search)) {
   var d = document.getElementById("diag");
-  function show(t) { d.classList.remove("hidden"); d.textContent += t + "\n"; }
-  window.addEventListener("error", function (e) { show("خطأ: " + (e.message || "فشل تحميل ملف")); }, true);
-  window.addEventListener("unhandledrejection", function (e) { show("خطأ: " + (e.reason && (e.reason.message || e.reason))); });
-  setTimeout(async function () {
-    if (window.__ok) return;
-    show("لم يتم تحميل كود اللعبة. فحص الملفات:");
-    for (var f of ["js/rooms.js", "js/games/xo.js"]) {
-      try { var r = await fetch(f); show(f + " : " + (r.ok ? "موجود" : "غير موجود (" + r.status + ")")); }
-      catch (e) { show(f + " : تعذر الفحص"); }
-    }
-  }, 3000);
-})();
+  var showErr = function (t) { d.classList.remove("hidden"); d.textContent += t + "\n"; };
+  window.addEventListener("error", function (e) { showErr("خطأ: " + (e.message || "فشل تحميل ملف")); }, true);
+  window.addEventListener("unhandledrejection", function (e) { showErr("خطأ: " + (e.reason && (e.reason.message || e.reason))); });
+}
 </script>
 <main>
   <section id="home">
-    <h1>ألعاب ثنائية</h1>
-    <p class="sub">العب مع صديقك برابط واحد، بدون حساب.</p>
+    <div class="brand"><div class="logo">🎮</div><h1>ألعاب ثنائية</h1></div>
+    <p class="sub" id="homeSub">العب مع صديقك برابط واحد، بدون حساب.</p>
+
+    <div id="invite" class="invite hidden">
+      <h2>🎉 دعاك صديقك للعب!</h2>
+      <p>الغرفة <b id="invCode"></b>. كل ما عليك: <b>اكتب اسمك</b> في الخانة بالأسفل ثم اضغط <b>انضم</b>، وتبدأ اللعبة معه مباشرة.</p>
+    </div>
+
     <label for="name">اسمك</label>
     <input id="name" maxlength="14" placeholder="مثال: يونس" autocomplete="off">
-    <label>اختر لعبة وأنشئ غرفة</label>
-    <div class="games">
-      <button class="game" data-game="xo"><b>XO</b><span>إنشاء غرفة</span></button>
-      <button class="game" data-game="color"><b>تحدي الألوان</b><span>30 ثانية، الأكثر صح يفوز</span></button>
-      <button class="game" data-game="sudoku" data-mode="race"><b>سودوكو سباق</b><span>من يكمل أولًا</span></button>
-      <button class="game" data-game="sudoku" data-mode="shared"><b>سودوكو مشتركة</b><span>نفس اللوحة بالنقاط</span></button>
-      <button class="game" data-game="numberRush"><b>تجميع الأرقام</b><span>سباق الأرقام السريع (1-16)</span></button>
-      <button class="game" data-game="balloonRace"><b>صراع البالونات</b><span>فجّر بالوناتك المخصصة بأسرع وقت</span></button>
-      <button class="game" data-game="migration"><b>هجرة الطيور</b><span>تحدي التركيز والانتباه السريع</span></button>
-      <button class="game" data-game="memoryMatrix"><b>ماتريكس الذاكرة</b><span>اختبر قوة ذاكرتك المكانية</span></button>
+    <button class="btn big hidden" id="invJoin" style="margin-top:14px">انضم إلى الغرفة</button>
+
+    <div id="create">
+      <label>اختر لعبة وأنشئ غرفة</label>
+      <div class="games" id="homeGames"></div>
+      <label for="diff">صعوبة السودوكو</label>
+      <select id="diff"><option value="easy">سهل</option><option value="medium" selected>متوسط</option><option value="hard">صعب</option></select>
     </div>
-    <label for="diff">صعوبة السودوكو</label>
-    <select id="diff"><option value="easy">سهل</option><option value="medium" selected>متوسط</option><option value="hard">صعب</option></select>
-    <label for="join">أو انضم بكود صديقك (إن كانت الغرفة ممتلئة تدخل كمشاهد)</label>
-    <div class="row">
-      <input id="join" maxlength="4" placeholder="ABCD" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em">
-      <button class="btn" id="joinBtn">انضم</button>
+
+    <div id="joinbox">
+      <label for="join">لديك كود غرفة؟ (إن كانت ممتلئة تدخل كمشاهد)</label>
+      <div class="row">
+        <input id="join" maxlength="4" placeholder="ABCD" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em">
+        <button class="btn" id="joinBtn">انضم</button>
+      </div>
     </div>
     <p id="err" role="alert"></p>
+    <button class="link hidden" id="own">أو أنشئ غرفتك الخاصة</button>
   </section>
 
   <section id="room" class="hidden">
-    <div class="top">
+    <div class="top panel">
       <span class="chip" id="code"></span>
       <div class="row">
-        <button class="btn ghost" id="copy">نسخ الرابط</button>
-        <button class="btn ghost" id="wa">واتساب</button>
-        <button class="btn ghost" id="snd">🔊</button>
-        <button class="btn ghost" id="leave">خروج</button>
+        <button class="ib js-copy" aria-label="نسخ الرابط" title="نسخ الرابط">🔗</button>
+        <button class="ib js-wa" aria-label="مشاركة واتساب" title="واتساب">💬</button>
+        <button class="ib" id="snd" aria-label="الصوت">🔊</button>
+        <button class="ib" id="leave" aria-label="خروج" title="خروج">🚪</button>
       </div>
     </div>
     <p id="offline" class="hidden" role="status"></p>
     <p id="meta" class="sub"></p>
-    <div id="wait" class="wait hidden">
+    <div id="wait" class="wait panel hidden">
+      <div class="dots"><i></i><i></i><i></i></div>
       <h2>في انتظار صديقك…</h2>
-      <p>أرسل له الكود أو اضغط «نسخ الرابط» وأرسله له.</p>
+      <p>أرسل له الرابط وسيدخل الغرفة مباشرة</p>
+      <div class="bigcode" id="waitCode"></div>
+      <div class="row" style="justify-content:center">
+        <button class="btn js-copy">🔗 نسخ الرابط</button>
+        <button class="btn ghost js-wa">💬 واتساب</button>
+      </div>
     </div>
+    <div class="gtitle" id="gname"></div>
     <div id="game"></div>
+    <div id="gameActions" class="hidden"><button class="btn ghost" id="change">🔄 تغيير اللعبة</button></div>
   </section>
 </main>
+
+<div id="picker" class="sheet hidden">
+  <div class="sheet-in">
+    <h3>اختر اللعبة التالية</h3>
+    <div class="games" id="pickGames"></div>
+    <div style="text-align:center;margin-top:14px"><button class="btn ghost" id="pickCancel">إلغاء</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
 
 <script type="module">
 import * as R from "./js/rooms.js";
@@ -119,25 +162,40 @@ import numberRush from "./js/games/number-rush.js";
 import balloonRace from "./js/games/balloon-game.js";
 import migration from "./js/games/migration.js";
 import memoryMatrix from "./js/games/memory-matrix.js";
-  
-const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix};
+
+const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix };
+// قائمة الألعاب: لإضافة لعبة جديدة أضف سطرًا هنا وسطر الاستيراد أعلاه
+const LIST = [
+  { g: "xo", i: "⭕", t: "XO", d: "الكلاسيكية بالدور", c: "#e8475b" },
+  { g: "color", i: "🎨", t: "تحدي الألوان", d: "30 ثانية، الأكثر صحة يفوز", c: "#f59e0b" },
+  { g: "sudoku", m: "race", i: "🧩", t: "سودوكو سباق", d: "من يكمل أولًا", c: "#3b82f6" },
+  { g: "sudoku", m: "shared", i: "🤝", t: "سودوكو مشتركة", d: "نفس اللوحة بالنقاط", c: "#12a594" },
+  { g: "numberRush", i: "🔢", t: "تجميع الأرقام", d: "سباق الأرقام السريع (1-16)", c: "#8b5cf6" },
+  { g: "balloonRace", i: "🎈", t: "صراع البالونات", d: "فجّر بالوناتك بأسرع وقت", c: "#ec4899" },
+  { g: "migration", i: "🐦", t: "هجرة الطيور", d: "تحدي التركيز والانتباه", c: "#0ea5e9" },
+  { g: "memoryMatrix", i: "🧠", t: "ماتريكس الذاكرة", d: "اختبر ذاكرتك المكانية", c: "#16a34a" }
+];
 const $ = (s) => document.querySelector(s);
 const nameEl = $("#name"), errEl = $("#err");
-let code = null, unsub = null, unPres = null, prev = "", touched = 0, ac = null;
+let code = null, unsub = null, unPres = null, prev = "", touched = 0, ac = null, shown = "", inv = null, tt;
 
 nameEl.value = localStorage.getItem("name") || "";
-const myName = () => {
-  const n = nameEl.value.trim().slice(0, 14) || "لاعب";
-  localStorage.setItem("name", n);
-  return n;
-};
+const myName = () => { const n = nameEl.value.trim().slice(0, 14) || "لاعب"; localStorage.setItem("name", n); return n; };
+const link = () => location.origin + location.pathname + "?room=" + code;
 const show = (id) => { $("#home").classList.toggle("hidden", id !== "home"); $("#room").classList.toggle("hidden", id !== "room"); };
+function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("on"), 1800); }
+
+function cards(box, pick) {
+  box.innerHTML = LIST.map((x, k) => `<button class="game" data-k="${k}" style="--tint:${x.c}"><span class="ico">${x.i}</span><b>${x.t}</b><span class="d">${x.d}</span></button>`).join("");
+  box.onclick = (e) => { const b = e.target.closest(".game"); if (b) pick(LIST[b.dataset.k]); };
+}
 
 function enter(c) {
-  code = c;
+  code = c; inv = null;
   errEl.textContent = "";
   history.replaceState(null, "", "?room=" + c);
   $("#code").textContent = c;
+  $("#waitCode").textContent = c;
   show("room");
   unsub = R.watch(c, render);
   unPres = R.present(c, myName());
@@ -146,8 +204,9 @@ function enter(c) {
 function leave(msg) {
   if (unsub) unsub();
   if (unPres) unPres();
-  unsub = unPres = null; code = null; prev = "";
+  unsub = unPres = null; code = null; prev = ""; shown = "";
   history.replaceState(null, "", location.pathname);
+  normal();
   show("home");
   errEl.textContent = msg || "";
 }
@@ -160,9 +219,14 @@ function render(r) {
   const me = R.role(code), op = me === "host" ? "guest" : "host", on = r.online || {};
   const w = Object.values(r.spectators || {});
   $("#meta").textContent = (me === "spec" ? "أنت تشاهد المباراة. " : "") + (w.length ? `👁 ${w.length} يشاهدون: ${w.map((x) => x.name).join("، ")}` : "");
+  $("#meta").classList.toggle("hidden", !$("#meta").textContent);
   const gone = me !== "spec" && r.guest && on[me] && !on[op];
   $("#offline").classList.toggle("hidden", !gone);
   if (gone) $("#offline").textContent = `${r[op].name} غير متصل حاليًا…`;
+  $("#gameActions").classList.toggle("hidden", waiting || me === "spec");
+  const t = LIST.find((x) => x.g === r.game && (!x.m || x.m === (r.state || {}).mode));
+  $("#gname").textContent = waiting || !t ? "" : `${t.i} ${t.t}`;
+  if (r.game !== shown) { shown = r.game; $("#game").innerHTML = ""; $("#game").removeAttribute("data-rc"); prev = ""; }
   if (!waiting) {
     const sig = JSON.stringify(r.state);
     if (prev && sig !== prev && Date.now() - touched > 700) ping(); // تغيير من الطرف الآخر
@@ -180,15 +244,42 @@ async function join(c) {
   c = c.trim().toUpperCase();
   if (c.length !== 4) { errEl.textContent = "الكود مكوّن من 4 حروف"; return; }
   try { await R.joinRoom(c, myName()); enter(c); }
-  catch (e) {
-    errEl.textContent = e.message === "notfound" ? "لا توجد غرفة بهذا الكود"
-      : e.message === "full" ? "الغرفة ممتلئة" : "تعذّر الانضمام. تأكد من الاتصال.";
-  }
+  catch (e) { errEl.textContent = e.message === "notfound" ? "لا توجد غرفة بهذا الكود" : "تعذّر الانضمام. تأكد من الاتصال."; }
 }
 
-document.querySelectorAll(".game[data-game]").forEach((b) => b.onclick = () => create(b.dataset.game, b.dataset.mode));
+// تغيير اللعبة داخل نفس الغرفة
+function pick(x) {
+  $("#picker").classList.add("hidden");
+  R.patch(code, { game: x.g, state: G[x.g].init(x.m, $("#diff").value) }).catch(() => toast("تعذّر تغيير اللعبة"));
+}
+
+// وضع الدعوة: من يفتح رابط غرفة يرى اسمه وزر الانضمام فقط
+function invite(c) {
+  inv = c; $("#join").value = c; $("#invCode").textContent = c;
+  ["#invite", "#invJoin", "#own"].forEach((s) => $(s).classList.remove("hidden"));
+  ["#create", "#joinbox", "#homeSub"].forEach((s) => $(s).classList.add("hidden"));
+  errEl.textContent = "";
+  setTimeout(() => nameEl.focus(), 50);
+}
+function normal() {
+  inv = null;
+  ["#invite", "#invJoin", "#own"].forEach((s) => $(s).classList.add("hidden"));
+  ["#create", "#joinbox", "#homeSub"].forEach((s) => $(s).classList.remove("hidden"));
+}
+
+cards($("#homeGames"), (x) => create(x.g, x.m));
+cards($("#pickGames"), pick);
 $("#joinBtn").onclick = () => join($("#join").value);
 $("#join").onkeydown = (e) => e.key === "Enter" && join(e.target.value);
+$("#invJoin").onclick = () => {
+  if (!nameEl.value.trim()) { errEl.textContent = "اكتب اسمك أولًا ثم اضغط انضم"; nameEl.focus(); return; }
+  join(inv);
+};
+nameEl.onkeydown = (e) => e.key === "Enter" && inv && $("#invJoin").click();
+$("#own").onclick = () => { history.replaceState(null, "", location.pathname); normal(); errEl.textContent = ""; };
+$("#change").onclick = () => $("#picker").classList.remove("hidden");
+$("#pickCancel").onclick = () => $("#picker").classList.add("hidden");
+$("#picker").onclick = (e) => { if (e.target.id === "picker") e.target.classList.add("hidden"); };
 $("#leave").onclick = async () => {
   const c = code;
   if (unsub) unsub();
@@ -197,12 +288,11 @@ $("#leave").onclick = async () => {
   try { await R.leaveRoom(c); } catch (e) {}
   leave();
 };
-$("#wa").onclick = () => window.open("https://wa.me/?text=" + encodeURIComponent("تعال نلعب معي! " + location.origin + location.pathname + "?room=" + code), "_blank");
-$("#copy").onclick = async (e) => {
-  try { await navigator.clipboard.writeText(location.origin + location.pathname + "?room=" + code); e.target.textContent = "تم النسخ"; }
-  catch { e.target.textContent = "انسخ من شريط العنوان"; }
-  setTimeout(() => (e.target.textContent = "نسخ الرابط"), 2000);
-};
+document.querySelectorAll(".js-wa").forEach((b) => b.onclick = () => window.open("https://wa.me/?text=" + encodeURIComponent("تعال نلعب معي! " + link()), "_blank"));
+document.querySelectorAll(".js-copy").forEach((b) => b.onclick = async () => {
+  try { await navigator.clipboard.writeText(link()); toast("تم نسخ الرابط ✓"); }
+  catch { toast("انسخ الرابط من شريط العنوان"); }
+});
 
 // صوت واهتزاز عند حركة الطرف الآخر
 function ping() {
@@ -220,12 +310,9 @@ updSnd();
 
 window.__ok = true;
 
-// فتح رابط غرفة: العودة مباشرة إن كنت فيها، أو تجهيز خانة الكود للانضمام
+// فتح رابط غرفة: العودة مباشرة إن كنت فيها، وإلا شاشة الدعوة
 const p = (new URLSearchParams(location.search).get("room") || "").toUpperCase();
-if (p) {
-  if (R.role(p)) enter(p);
-  else { $("#join").value = p; errEl.textContent = "أدخل اسمك ثم اضغط «انضم»"; }
-}
+if (p) { if (R.role(p)) enter(p); else invite(p); }
 </script>
 </body>
 </html>
