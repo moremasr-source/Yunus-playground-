@@ -30,7 +30,7 @@ const CSS = `.mm{text-align:center}
 
 if (!document.getElementById("mm-css")) { const st = document.createElement("style"); st.id = "mm-css"; st.textContent = CSS; document.head.append(st); }
 
-let cur = null, level = 0, flashPhase = false, selectedTiles = [], lastStart = 0, starting = false, tickId = null, flashTimerSet = false;
+let cur = null, level = 0, flashPhase = false, selectedTiles = [], lastStart = 0, starting = false, tickId = null, flashTimerSet = false, wrongIdx = -1;
 const phase = (s) => { const t = now(); return !s.startAt ? "wait" : t < s.startAt ? "count" : t < s.startAt + DUR ? "play" : "end"; };
 
 function triggerFlash() {
@@ -52,6 +52,9 @@ function handleCellClick(index) {
 
   if (!currentData.targets.includes(index)) {
     selectedTiles = [];
+    wrongIdx = index; // وميض أحمر قصير للتنبيه على الخطأ
+    setTimeout(() => { wrongIdx = -1; tick(); }, 450);
+    tick();
     return;
   }
 
@@ -98,7 +101,7 @@ function tick() {
       msg = "جارٍ احتساب النتيجة النهائية…";
     } else {
       final = true;
-      const win = hs > gs ? "host" : gs > hs ? "flash" : null; // اصلاح طفيف للتعادل
+      const win = hs > gs ? "host" : gs > hs ? "guest" : null;
       msg = (!win ? "تعادل!" : win === me ? "فزت في اختبار الذاكرة!" : `فاز ${esc(r[win === "host" ? "host" : "guest"].name)}`) + ` (${hs} مقابل ${gs})`;
     }
   }
@@ -110,7 +113,9 @@ function tick() {
   const cells = el.querySelectorAll(".mm-cell");
   cells.forEach((cell, idx) => {
     cell.className = "mm-cell";
-    if (ph === "play" && flashPhase && currentData.targets.includes(idx)) {
+    if (idx === wrongIdx) {
+      cell.classList.add("wrong");
+    } else if (ph === "play" && flashPhase && currentData.targets.includes(idx)) {
       cell.classList.add("flash");
     } else if (selectedTiles.includes(idx)) {
       cell.classList.add("correct");
@@ -127,7 +132,7 @@ function tick() {
 }
 
 function build(el, room) {
-  el.dataset.rc = String(room.createdAt);
+  el.dataset.rc = room.createdAt + ":" + room.state.seed;
   level = 0;
   flashPhase = false;
   flashTimerSet = false;
@@ -193,7 +198,7 @@ const game = {
       api.patch({ "state/startAt": now() + LEAD }); 
     }
 
-    if (!el.querySelector(".mm") || el.dataset.rc !== String(room.createdAt)) {
+    if (!el.querySelector(".mm") || el.dataset.rc !== room.createdAt + ":" + s.seed) {
       build(el, room);
     }
     
