@@ -107,7 +107,7 @@ function tick() {
 }
 
 function build(el, room) {
-  el.dataset.rc = String(room.createdAt);
+  el.dataset.rc = room.createdAt + ":" + room.state.seed;
   el.innerHTML = `<div class="mig">
     <div class="c-stats" id="mig-info"></div>
     <div class="mig-time" id="mig-time"></div>
@@ -161,7 +161,7 @@ const game = {
       api.patch({ "state/startAt": now() + LEAD }); 
     }
 
-    if (!el.querySelector(".mig") || el.dataset.rc !== String(room.createdAt)) {
+    if (!el.querySelector(".mig") || el.dataset.rc !== room.createdAt + ":" + s.seed) {
       build(el, room);
     }
     
