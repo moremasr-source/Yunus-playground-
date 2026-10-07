@@ -162,8 +162,10 @@ import numberRush from "./js/games/number-rush.js";
 import balloonRace from "./js/games/balloon-game.js";
 import migration from "./js/games/migration.js";
 import memoryMatrix from "./js/games/memory-matrix.js";
+import oddOneOut from "./js/games/odd-one-out.js"; 
 
-const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix };
+  
+const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix, oddOneOut };
 // قائمة الألعاب: لإضافة لعبة جديدة أضف سطرًا هنا وسطر الاستيراد أعلاه
 const LIST = [
   { g: "xo", i: "⭕", t: "XO", d: "الكلاسيكية بالدور", c: "#e8475b" },
@@ -173,6 +175,7 @@ const LIST = [
   { g: "numberRush", i: "🔢", t: "تجميع الأرقام", d: "سباق الأرقام السريع (1-16)", c: "#8b5cf6" },
   { g: "balloonRace", i: "🎈", t: "صراع البالونات", d: "فجّر بالوناتك بأسرع وقت", c: "#ec4899" },
   { g: "migration", i: "🐦", t: "هجرة الطيور", d: "تحدي التركيز والانتباه", c: "#0ea5e9" },
+  { g: "oddOneOut", i: "🔍", t: "العنصر المختلف", d: "جد الشكل الشاذ بأسرع وقت", c: "#06b6d4" },
   { g: "memoryMatrix", i: "🧠", t: "ماتريكس الذاكرة", d: "اختبر ذاكرتك المكانية", c: "#16a34a" }
 ];
 const $ = (s) => document.querySelector(s);
