@@ -172,13 +172,15 @@ import numberRush from "./js/games/number-rush.js";
 import balloonRace from "./js/games/balloon-game.js";
 import migration from "./js/games/migration.js";
 import memoryMatrix from "./js/games/memory-matrix.js";
+import mastermind from "./js/games/mastermind.js";
+import apc from "./js/games/apc.js";
 import { startBot } from "./js/bot.js";
 import oddOneOut from "./js/games/odd-one-out.js"; 
 import reverseMemory from "./js/games/reverse-memory.js";
 import battleship from "./js/games/battleship.js";
 import logicalMatrix from "./js/games/logical-matrix.js";
   
-const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix, oddOneOut, reverseMemory, battleship, logicalMatrix  };
+const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix, oddOneOut, reverseMemory, battleship, logicalMatrix, mastermind, apc };
 // قائمة الألعاب: لإضافة لعبة جديدة أضف سطرًا هنا وسطر الاستيراد أعلاه
 const LIST = [
   { g: "xo", i: "⭕", t: "XO", d: "الكلاسيكية بالدور", c: "#e8475b", s: "wins" },
@@ -193,6 +195,8 @@ const LIST = [
   { g: "memoryMatrix", i: "🧠", t: "ماتريكس الذاكرة", d: "اختبر ذاكرتك المكانية", c: "#16a34a" },
   { g: "logicalMatrix", i: "🔗", t: "الروابط الخفية", d: "اكتشف التصنيفات والروابط المشتركة", c: "#14b8a6" },
   { g: "battleship", i: "🚢", t: "المعركة البحرية", d: "اقصف أسطول خصمك ودمر سفنه", c: "#2563eb" },
+  { g: "mastermind", i: "🔐", t: "فك الشفرة", d: "استنتج الرمز السري بأقل محاولات", c: "#4f46e5", s: "wins" },
+  { g: "apc", i: "💡", t: "ألف استخدام", d: "60 ثانية لأفكار غير مكررة", c: "#f97316" },
 ];
 const $ = (s) => document.querySelector(s);
 const nameEl = $("#name"), errEl = $("#err");
@@ -328,7 +332,7 @@ $("#leave").onclick = async () => {
   try { await R.leaveRoom(c); } catch (e) {}
   leave();
 };
-document.querySelectorAll(".js-wa").forEach((b) => b.onclick = () => window.open("https://wa.me/?text=" + encodeURIComponent("تعال نلعب معي! " + link()), "_blank"));
+document.querySelectorAll(".js-wa").forEach((b) => b.onclick = () => window.open("https://wa.me/?text=" + encodeURIComponent("تعال العب معي! " + link()), "_blank"));
 document.querySelectorAll(".js-copy").forEach((b) => b.onclick = async () => {
   try { await navigator.clipboard.writeText(link()); toast("تم نسخ الرابط ✓"); }
   catch { toast("انسخ الرابط من شريط العنوان"); }
@@ -351,6 +355,7 @@ updSnd();
 // ---- أفضل نتيجة: نكتشف نهاية الجولة ونحفظ رقمك إن كان أفضل ----
 const DUR = 30000;
 function result(r, me) {
+  if (G[r.game].final) return G[r.game].final(r, me); // ألعاب تحسب نتيجتها بنفسها
   const s = r.state || {}, sc = s.scores || {};
   if (r.game === "xo") return s.winner ? { key: "r" + s.round, win: s.winner === me } : null;
   if (r.game === "sudoku") return s.mode === "race" ? (s.winner ? { key: s.puz, win: s.winner === me } : null) : (s.over ? { key: s.puz, score: sc[me] || 0 } : null);
