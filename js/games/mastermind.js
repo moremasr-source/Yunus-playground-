@@ -20,6 +20,8 @@ export function feedback(code, guess) {
 const list = (s, p) => (s.g && s.g[p] ? s.g[p].split(",") : []);
 const finished = (s, p) => list(s, p).includes(codeOf(s.seed)) || list(s, p).length >= MAXG;
 const isOver = (s) => !!s.winner || (finished(s, "host") && finished(s, "guest"));
+const MARK = { ok: "✔", mis: "↔", no: "✕" };
+const gcell = (d, st) => `<span class="mx-g">${peg(d)}<small class="mx-${st}">${MARK[st]}</small></span>`;
 const peg = (d) => `<span class="mx-p" style="background:${COLORS[d]}">${+d + 1}</span>`;
 
 const CSS = `.mx-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:14px;background:#f3f6fb;margin:6px 0}
@@ -38,6 +40,9 @@ span.mx-p{cursor:default}
 .mx-ex{background:#fff;border:1px dashed var(--line);border-radius:12px;padding:8px 10px;font-size:.9rem;line-height:1.9}
 .mx-ex .mx-p{width:26px;height:26px;font-size:.8rem}
 .mx-ex .mx-pegs{display:inline-flex;gap:4px;vertical-align:middle}
+.mx-g{display:flex;flex-direction:column;align-items:center;gap:2px}
+.mx-g small{font-size:.85rem;font-weight:800}
+.mx-ok{color:#16a34a}.mx-mis{color:#d97706}.mx-no{color:#9aa5b8}
 .c-stats{display:flex;justify-content:space-between;font-weight:800;font-size:1.1rem}`;
 if (!document.getElementById("mx-css")) { const st = document.createElement("style"); st.id = "mx-css"; st.textContent = CSS; document.head.append(st); }
 
@@ -45,7 +50,7 @@ let draft = [], lastSeed = null, view = "host", helpOpen = localStorage.getItem(
 
 const game = {
   id: "mastermind",
-  init: () => ({ seed: (Math.random() * 1e6) | 0 }),
+  init: (mode) => ({ seed: (Math.random() * 1e6) | 0, mode: mode === "guided" ? "guided" : "classic" }),
   // يستخدمها index لتسجيل انتصاراتك
   final(room, me) { const s = room.state; return isOver(s) ? { key: String(s.seed), win: s.winner === me } : null; },
 
@@ -60,7 +65,9 @@ const game = {
     if (over) msg = !s.winner ? "لم يفك أحد الشفرة 😅" : s.winner === me ? `فككتها في ${list(s, me).length} محاولات 🎉` : `فاز ${nm(s.winner)} 🏆`;
     else if (myDone && !spec) msg = bot ? "انتهت محاولاتك، جرّب مرة أخرى" : "انتهت محاولاتك، بانتظار الطرف الآخر…";
 
+    const guided = s.mode === "guided"; // مرشد: إشارة تحت كل لون. كلاسيكي: عدد الإشارات فقط
     const rows = mine.map((g) => {
+      if (guided) return `<div class="mx-row"><div class="mx-pegs">${[...g].map((d, i) => gcell(d, d === code[i] ? "ok" : code.includes(d) ? "mis" : "no")).join("")}</div></div>`;
       const f = feedback(code, g);
       return `<div class="mx-row"><div class="mx-pegs">${[...g].map((d) => peg(d)).join("")}</div><span class="mx-fb">${"⚫".repeat(f.b)}${"⚪".repeat(f.w)}${f.b + f.w ? "" : "—"}</span></div>`;
     }).join("");
@@ -79,12 +86,16 @@ const game = {
         <ol>
           <li>الشفرة سرّية: <b>${LEN} ألوان مختلفة</b> (لا يتكرر لون).</li>
           <li>اضغط ${LEN} ألوان بالأسفل لتكوّن تخمينك، ثم اضغط <b>جرّب ✓</b>.</li>
-          <li>بعد كل تخمين تظهر إشارات:<br>⚫ لون صحيح <b>ومكانه صحيح</b><br>⚪ لون صحيح <b>لكن مكانه خطأ</b><br>— لا شيء: اللون <b>غير موجود</b> في الشفرة</li>
+          <li>${guided
+            ? "تحت كل لون في تخمينك تظهر إشارة:<br>✔ لون صحيح <b>ومكانه صحيح</b><br>↔ اللون موجود <b>لكن مكانه خطأ</b><br>✕ اللون <b>غير موجود</b> في الشفرة"
+            : "بعد كل تخمين تظهر إشارات:<br>⚫ لون صحيح <b>ومكانه صحيح</b><br>⚪ لون صحيح <b>لكن مكانه خطأ</b><br>— لا شيء: اللون <b>غير موجود</b><br><b>الإشارات لا تقول أي لون هو الصحيح</b>، وهذا هو التحدي: استنتج ذلك بنفسك!"}</li>
           <li>استنتج من الإشارات وعدّل تخمينك. عندك <b>${MAXG} محاولات</b>، وأول من يفكّ الشفرة يفوز 🏆</li>
         </ol>
-        <div class="mx-ex"><b>مثال:</b> الشفرة <span class="mx-pegs">${peg(0)}${peg(1)}${peg(2)}${peg(3)}</span><br>تخمينك <span class="mx-pegs">${peg(0)}${peg(2)}${peg(4)}${peg(5)}</span> ← ⚫⚪<br><small>الرقم 1 في مكانه الصحيح (⚫)، والرقم 3 موجود لكن مكانه خطأ (⚪)، و5 و6 غير موجودين.</small></div>
+        <div class="mx-ex"><b>مثال:</b> الشفرة <span class="mx-pegs">${peg(0)}${peg(1)}${peg(2)}${peg(3)}</span><br>تخمينك ${guided
+          ? `<span class="mx-pegs">${gcell(0, "ok")}${gcell(2, "mis")}${gcell(4, "no")}${gcell(5, "no")}</span><br><small>الرقم 1 في مكانه (✔)، والرقم 3 موجود لكن مكانه خطأ (↔)، و5 و6 غير موجودين (✕).</small>`
+          : `<span class="mx-pegs">${peg(0)}${peg(2)}${peg(4)}${peg(5)}</span> ← ⚫⚪<br><small>تعرف أن لونًا واحدًا في مكانه ولونًا آخر في مكان خطأ، لكن الإشارة لا تقول أيهما، فاستنتج!</small>`}</div>
       </details>
-      <p class="mx-leg">⚫ لون ومكان صحيحان · ⚪ لون صحيح ومكانه خطأ · — غير موجود</p>
+      <p class="mx-leg">${guided ? "✔ مكانه صحيح · ↔ مكانه خطأ · ✕ غير موجود" : "⚫ لون ومكان صحيحان · ⚪ لون صحيح ومكانه خطأ · — غير موجود (بلا تحديد الأماكن)"}</p>
       ${reveal ? `<div class="mx-row"><b>الشفرة</b><div class="mx-pegs">${[...code].map((d) => peg(d)).join("")}</div></div>` : ""}
       ${rows}
       ${canPlay ? `<div class="mx-row"><b>تخمينك</b><div class="mx-pegs">${slots}</div></div><div class="mx-pal">${pal}</div><button class="btn" id="mx-go" ${draft.length === LEN ? "" : "disabled"}>جرّب ✓</button>` : ""}
@@ -106,7 +117,7 @@ const game = {
         api.patch(q);
       }
       else if (b.id === "mx-sw") { view = view === "host" ? "guest" : "host"; again(); }
-      else if (b.id === "mx-again") api.patch({ state: game.init() });
+      else if (b.id === "mx-again") api.patch({ state: game.init(s.mode) });
     };
   }
 };

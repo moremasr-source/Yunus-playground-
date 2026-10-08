@@ -121,8 +121,9 @@ function tick() {
     const gridEl = q("oo-grid");
     
     // إعادة بناء الشبكة إذا تغيرت بنية الأشكال أو عددها
-    if (gridEl.dataset.puzzleIndex !== String(myScore)) {
-      gridEl.dataset.puzzleIndex = myScore;
+    const pk = s.seed + ":" + myScore;
+    if (gridEl.dataset.puzzleIndex !== pk) {
+      gridEl.dataset.puzzleIndex = pk;
       gridEl.style.gridTemplateColumns = `repeat(${puzzle.cols}, 1fr)`;
       
       let html = "";
@@ -138,7 +139,7 @@ function tick() {
 }
 
 function build(el, room) {
-  el.dataset.rc = String(room.createdAt);
+  el.dataset.rc = room.createdAt + ":" + room.state.seed;
   const s = room.state;
   const me = cur ? cur.me : "host";
   const myScore = (s.scores && s.scores[me]) || 0;
@@ -149,7 +150,7 @@ function build(el, room) {
     <div class="oo-time" id="oo-time"></div>
     <div class="oo-bar"><i id="oo-bar"></i></div>
     <p class="msg" id="oo-msg"></p>
-    <div class="oo-grid" id="oo-grid" data-puzzle-index="${myScore}" style="grid-template-columns: repeat(${puzzle.cols}, 1fr);">
+    <div class="oo-grid" id="oo-grid" data-puzzle-index="${s.seed}:${myScore}" style="grid-template-columns: repeat(${puzzle.cols}, 1fr);">
       ${Array.from({ length: puzzle.gridSize }, (_, i) => {
         const item = i === puzzle.oddIndex ? puzzle.odd : puzzle.base;
         return `<button class="oo-tile" data-index="${i}">${item}</button>`;
@@ -160,7 +161,7 @@ function build(el, room) {
 
   el.querySelector("#oo-grid").onpointerdown = (e) => {
     const btn = e.target.closest(".oo-tile");
-    if (btn && phase(room.state) === "play") {
+    if (btn && phase(cur.room.state) === "play") {
       e.preventDefault();
       choose(parseInt(btn.dataset.index, 10));
     }
@@ -171,6 +172,7 @@ function build(el, room) {
 
 const game = {
   id: "odd-one-out",
+  final(room, me) { const s = room.state; return s.startAt && now() > s.startAt + DUR + 1500 ? { key: s.seed + ":" + s.startAt, score: (s.scores && s.scores[me]) || 0 } : null; },
   init: () => ({ 
     seed: (Math.random() * 1e6) | 0, 
     scores: { host: 0, guest: 0 } 
@@ -185,7 +187,7 @@ const game = {
       api.patch({ "state/startAt": now() + LEAD }); 
     }
 
-    if (!el.querySelector(".oo") || el.dataset.rc !== String(room.createdAt)) {
+    if (!el.querySelector(".oo") || el.dataset.rc !== room.createdAt + ":" + s.seed) {
       build(el, room);
     }
     

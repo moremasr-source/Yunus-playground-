@@ -148,8 +148,8 @@ function tick() {
   if (ph === "play" && !spec) {
     const myScore = s.scores[me] || 0;
     const gridEl = q("rm-grid");
-    if (gridEl && Number(gridEl.dataset.score) !== myScore && !showingPattern) {
-      gridEl.dataset.score = myScore;
+    if (gridEl && gridEl.dataset.shown !== s.seed + ":" + myScore && !showingPattern) {
+      gridEl.dataset.shown = s.seed + ":" + myScore;
       const seq = getPattern(s.seed, myScore);
       setTimeout(() => triggerShowPattern(seq), 300);
     }
@@ -159,7 +159,7 @@ function tick() {
 }
 
 function build(el, room) {
-  el.dataset.rc = String(room.createdAt);
+  el.dataset.rc = room.createdAt + ":" + room.state.seed;
   const s = room.state;
   const me = cur ? cur.me : "host";
   const myScore = (s.scores && s.scores[me]) || 0;
@@ -169,7 +169,7 @@ function build(el, room) {
     <div class="rm-time" id="rm-time"></div>
     <div class="rm-bar"><i id="rm-bar"></i></div>
     <p class="msg" id="rm-msg"></p>
-    <div class="rm-grid" id="rm-grid" data-score="${myScore}">
+    <div class="rm-grid" id="rm-grid" data-shown="-1">
       ${Array.from({ length: 9 }, (_, i) => `<button class="rm-tile" data-index="${i}">🔹</button>`).join("")}
     </div>
     <button class="btn hidden" id="rm-again" style="margin-top:15px;width:100%">جولة جديدة</button>
@@ -177,7 +177,7 @@ function build(el, room) {
 
   el.querySelector("#rm-grid").onpointerdown = (e) => {
     const btn = e.target.closest(".rm-tile");
-    if (btn && phase(room.state) === "play" && !showingPattern) {
+    if (btn && phase(cur.room.state) === "play" && !showingPattern) {
       e.preventDefault();
       choose(parseInt(btn.dataset.index, 10));
     }
@@ -191,6 +191,7 @@ function build(el, room) {
 
 const game = {
   id: "reverse-memory",
+  final(room, me) { const s = room.state; return s.startAt && now() > s.startAt + DUR + 1500 ? { key: s.seed + ":" + s.startAt, score: (s.scores && s.scores[me]) || 0 } : null; },
   init: () => ({ 
     seed: (Math.random() * 1e6) | 0, 
     scores: { host: 0, guest: 0 } 
@@ -205,7 +206,7 @@ const game = {
       api.patch({ "state/startAt": now() + LEAD }); 
     }
 
-    if (!el.querySelector(".rm") || el.dataset.rc !== String(room.createdAt)) {
+    if (!el.querySelector(".rm") || el.dataset.rc !== room.createdAt + ":" + s.seed) {
       build(el, room);
     }
     

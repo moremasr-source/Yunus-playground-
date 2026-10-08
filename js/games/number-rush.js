@@ -70,7 +70,7 @@ function tick() {
     final = true;
     const f = s.finish ? Object.entries(s.finish).sort((a, b) => a[1] - b[1])[0] : null; // أسرع من أنهى الأرقام
     const win = f ? f[0] : hs > gs ? "host" : gs > hs ? "guest" : null;
-    msg = (!win ? "تعادل!" : win === me ? "فزت في سباق الأرقام!" : `فاز ${esc(r[win].name)}`) + ` (${hs} مقابل ${gs})` + (f ? " ⚡ أنهى كل الأرقام أولًا" : "");
+    msg = (!win ? "تعادل!" : win === me ? "فزت في سباق الأرقام!" : `فاز ${esc(r[win].name)}`) + ` (${hs} مقابل ${gs})` + (f ? ` ⚡ ${f[0] === me ? "أنهيت" : esc(r[f[0]].name) + " أنهى"} كل الأرقام في ${((f[1] - s.startAt) / 1000).toFixed(1)} ثانية` : "");
   }
   const m = q("nr-msg"); m.innerHTML = msg; m.className = "msg" + (final ? " mine" : "");
 
@@ -103,6 +103,13 @@ function build(el, room) {
 
 const game = {
   id: "number-rush",
+  // العدد أولًا، وعند تساوي العدد الأسرع هو الأفضل (الوقت يُسجَّل لمن أكمل كل الأرقام)
+  final(room, me) {
+    const s = room.state;
+    if (!s.startAt || now() <= endAt(s) + 1500) return null;
+    const mine = s.finish && s.finish[me];
+    return { key: s.seed + ":" + s.startAt, score: (s.scores && s.scores[me]) || 0, time: mine ? (mine - s.startAt) / 1000 : null };
+  },
   init: () => ({ seed: (Math.random() * 1e6) | 0, scores: { host: 0, guest: 0 } }),
   render(el, room, me, api) {
     const s = room.state, st = s.startAt || 0;

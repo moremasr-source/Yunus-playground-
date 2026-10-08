@@ -5,7 +5,7 @@ const DUR = 90000, LEAD = 4000; // زيادة وقت المعركة قليلاً
 
 function mul(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-function getPlayerShips(seed, roleRole) {
+export function getPlayerShips(seed, roleRole) {
   const r = mul(seed * 313 + (roleRole === "host" ? 11 : 99));
   let ships = [];
   while (ships.length < 4) {
@@ -42,10 +42,11 @@ function fire(cellIndex) {
 
   // التحقق مما إذا كان الدور دور اللاعب الحالي
   if (s.turn !== me) return;
+  if ((s.scores.host || 0) >= 4 || (s.scores.guest || 0) >= 4) return; // انتهت المعركة
 
   const op = me === "host" ? "guest" : "host";
   const shots = s.shots && s.shots[me] ? s.shots[me] : {};
-  if (shots[cellIndex] !== undefined) return; // تم قصفها مسبقاً
+  if (shots[cellIndex] != null) return; // تم قصفها مسبقاً
 
   const opShips = getPlayerShips(s.seed, op);
   const isHit = opShips.includes(cellIndex);
@@ -174,7 +175,7 @@ function build(el, room) {
 
   el.querySelector("#bs-target-grid").onpointerdown = (e) => {
     const btn = e.target.closest(".bs-cell");
-    if (btn && phase(room.state) === "play") {
+    if (btn && phase(cur.room.state) === "play") {
       e.preventDefault();
       fire(parseInt(btn.dataset.index, 10));
     }
@@ -185,6 +186,7 @@ function build(el, room) {
 
 const game = {
   id: "battleship",
+  final(room, me) { const s = room.state, h = s.scores.host || 0, g = s.scores.guest || 0; return s.startAt && (now() > s.startAt + DUR + 1500 || h >= 4 || g >= 4) ? { key: s.seed + ":" + s.startAt, win: (me === "host" ? h > g : g > h) } : null; },
   init: () => ({ 
     seed: (Math.random() * 1e6) | 0, 
     scores: { host: 0, guest: 0 },

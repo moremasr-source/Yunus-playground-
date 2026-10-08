@@ -59,6 +59,9 @@ const CSS = `.lm{text-align:center}
 .lm-tile.selected{background:#38bdf8;color:#fff;border-color:#0284c7;transform:scale(0.97)}
 .lm-tile.solved{background:#22c55e;color:#fff;border-color:#16a34a;cursor:default}
 .c-stats{display:flex;justify-content:space-between;font-weight:800;font-size:1.1rem}
+.lm-row{border-radius:12px;padding:8px 12px;margin:8px auto;max-width:360px;color:#fff;font-weight:800}
+.lm-row small{display:block;font-weight:600;opacity:.95}
+.lm-tile.gone{display:none}
 @keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-5px)}100%{transform:translateX(0)}}
 .shake{animation:shake .3s}`;
 
@@ -66,12 +69,13 @@ if (!document.getElementById("lm-css")) { const st = document.createElement("sty
 
 let cur = null, lastStart = 0, lockUntil = 0, starting = false, tickId = null;
 let selectedIndices = [];
+let hint = "", hintUntil = 0; // رسالة تغذية راجعة قصيرة
 
 const phase = (s) => { const t = now(); return !s.startAt ? "wait" : t < s.startAt ? "count" : t < s.startAt + DUR ? "play" : "end"; };
 
 function selectTile(index) {
   const { room: r, me, api } = cur, s = r.state;
-  if (me === "spec" || phase(s) !== "play" || Date.now() < lockUntil) return;
+  if (me === "spec" || phase(s) !== "play" || Date.now() < lockUntil || (s.scores && ((s.scores.host || 0) >= 4 || (s.scores.guest || 0) >= 4))) return;
 
   // التأكد من أن المربع لم يتم حله مسبقاً من قبل هذا اللاعب
   const solved = s.solved && s.solved[me] ? s.solved[me] : [];
@@ -93,12 +97,15 @@ function selectTile(index) {
         // صحيح! أضف العناصر إلى قائمة المجموعات المحلولة لهذا اللاعب
         const updatedSolved = [...solved, ...selectedIndices];
         const currentScore = (s.scores && s.scores[me]) || 0;
+        hint = "✅ أحسنت! المجموعة: " + getShuffledItems(s.seed).puzzle.groups[firstGroup].category; hintUntil = Date.now() + 2500;
         api.patch({
           [`state/solved/${me}`]: updatedSolved,
           [`state/scores/${me}`]: currentScore + 1
         });
       } else {
         // خطأ: اهتزاز وتفريغ التحديد
+        const cnt = {}; selectedIndices.forEach((i) => { const g = allItems[i].groupIdx; cnt[g] = (cnt[g] || 0) + 1; });
+        hint = Math.max(...Object.values(cnt)) === 3 ? "قريب جدًا! 3 كلمات من 4 صحيحة 👀" : "ليست مجموعة صحيحة، حاول مجددًا"; hintUntil = Date.now() + 2500;
         lockUntil = Date.now() + LOCK;
         const gridEl = cur.el.querySelector("#lm-grid");
         if (gridEl) {
@@ -135,7 +142,6 @@ function tick() {
   else if (ph === "count") { msg = `استعد! تبدأ اللعبة خلال ${Math.ceil((s.startAt - t) / 1000)} ثوانٍ`; }
   else if (ph === "play") {
     if (spec) msg = "وضع المتفرج - تتبع الروابط الخفية";
-    else if (hs === 4 || gs === 4) { final = true; }
   } else {
     if (t < end + 1500 && hs < 4 && gs < 4) {
       msg = "جارٍ احتساب النتيجة النهائية…";
@@ -152,6 +158,7 @@ function tick() {
     msg = (win === me ? "أكملت جميع المجموعات أولاً وفزت! 🧠🏆" : `أكمل ${esc(r[win].name)} المجموعات أولاً!`);
   }
 
+  if (ph === "play" && !final && Date.now() < hintUntil) msg = hint;
   msgEl.innerHTML = msg;
   msgEl.className = "msg" + (final ? " mine" : "");
 
@@ -159,11 +166,20 @@ function tick() {
   if (!spec && ph === "play") {
     const solved = s.solved && s.solved[me] ? s.solved[me] : [];
     const gridEl = q("lm-grid");
+    // المجموعات المحلولة تظهر في الأعلى باسم التصنيف وكلماتها
+    const { puzzle, allItems } = getShuffledItems(s.seed), cols = ["#16a34a", "#2563eb", "#d97706", "#db2777"];
+    let rowsHtml = "";
+    for (let k = 0; k * 4 < solved.length; k++) {
+      const grp = puzzle.groups[allItems[solved[k * 4]].groupIdx];
+      rowsHtml += `<div class="lm-row" style="background:${cols[k % 4]}">✅ ${esc(grp.category)}<small>${grp.items.map(esc).join(" · ")}</small></div>`;
+    }
+    const sv = q("lm-solved");
+    if (sv._h !== rowsHtml) { sv._h = rowsHtml; sv.innerHTML = rowsHtml; }
     if (gridEl) {
       gridEl.querySelectorAll(".lm-tile").forEach((tile, idx) => {
         tile.className = "lm-tile";
         if (solved.includes(idx)) {
-          tile.classList.add("solved");
+          tile.classList.add("gone");
         } else if (selectedIndices.includes(idx)) {
           tile.classList.add("selected");
         }
@@ -175,7 +191,7 @@ function tick() {
 }
 
 function build(el, room) {
-  el.dataset.rc = String(room.createdAt);
+  el.dataset.rc = room.createdAt + ":" + room.state.seed;
   const s = room.state;
   const { puzzle, allItems } = getShuffledItems(s.seed);
 
@@ -186,6 +202,7 @@ function build(el, room) {
     <div class="gtitle">التصنيف: ${esc(puzzle.theme)}</div>
     <p class="msg" id="lm-msg"></p>
     
+    <div id="lm-solved"></div>
     <div class="lm-grid" id="lm-grid">
       ${allItems.map((item, i) => `<button class="lm-tile" data-index="${i}">${esc(item.text)}</button>`).join("")}
     </div>
@@ -195,7 +212,7 @@ function build(el, room) {
 
   el.querySelector("#lm-grid").onpointerdown = (e) => {
     const btn = e.target.closest(".lm-tile");
-    if (btn && phase(room.state) === "play") {
+    if (btn && phase(cur.room.state) === "play") {
       e.preventDefault();
       selectTile(parseInt(btn.dataset.index, 10));
     }
@@ -209,6 +226,7 @@ function build(el, room) {
 
 const game = {
   id: "logical-matrix",
+  final(room, me) { const s = room.state, sc = s.scores || {}; return s.startAt && (now() > s.startAt + DUR + 1500 || (sc.host || 0) >= 4 || (sc.guest || 0) >= 4) ? { key: s.seed + ":" + s.startAt, score: sc[me] || 0 } : null; },
   init: () => ({ 
     seed: (Math.random() * 1e6) | 0, 
     scores: { host: 0, guest: 0 },
@@ -224,7 +242,7 @@ const game = {
       api.patch({ "state/startAt": now() + LEAD }); 
     }
 
-    if (!el.querySelector(".lm") || el.dataset.rc !== String(room.createdAt)) {
+    if (!el.querySelector(".lm") || el.dataset.rc !== room.createdAt + ":" + s.seed) {
       build(el, room);
     }
     
