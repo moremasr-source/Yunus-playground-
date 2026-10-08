@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f3f5fb">
 <title>ألعاب ثنائية</title>
+<script>
+// بعض المتصفحات (وضع الخصوصية، حظر الكوكيز، متصفحات التطبيقات) تمنع التخزين فتتعطل الصفحة؛ نستبدله بتخزين مؤقت في الذاكرة
+(function () {
+  ["localStorage", "sessionStorage"].forEach(function (n) {
+    try { var s = window[n]; s.setItem("_t", "1"); s.removeItem("_t"); }
+    catch (e) {
+      var d = {};
+      try { Object.defineProperty(window, n, { configurable: true, value: {
+        getItem: function (k) { return Object.prototype.hasOwnProperty.call(d, k) ? d[k] : null; },
+        setItem: function (k, v) { d[k] = String(v); }, removeItem: function (k) { delete d[k]; }, clear: function () { d = {}; } } }); } catch (e2) {}
+    }
+  });
+})();
+</script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap">
 <style>
 :root{--bg:#f3f5fb;--ink:#14182b;--card:#fff;--line:#dfe5f1;--x:#e8475b;--o:#12a594;--mut:#66708a;--r:18px;--sh:0 8px 24px rgba(20,24,43,.07)}
@@ -36,6 +50,20 @@ button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
 .link{background:none;border:0;color:var(--o);font:inherit;font-weight:700;cursor:pointer;margin-top:14px;text-decoration:underline}
 #err{color:var(--x);min-height:1.5em;margin:12px 0 0;font-weight:600}
 .hidden{display:none!important}
+.game{position:relative}
+.game.sel{border-color:var(--tint);box-shadow:0 0 0 3px rgba(18,165,148,.25)}
+.ord{position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font:700 .85rem Cairo,sans-serif;font-style:normal}
+.series{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:12px 14px;margin-bottom:10px;text-align:center}
+.s-score{display:flex;justify-content:space-between;font-weight:800;margin:6px 0}
+.s-chips{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:6px 0}
+.s-chip{padding:4px 9px;border-radius:10px;background:#eef2f8;font-size:1.1rem}
+.s-chip.now{outline:2px solid var(--o)}
+.s-foot .row{justify-content:center;margin-top:8px;flex-wrap:wrap}
+.s-win{font-size:1.2rem}
+#game.inseries [id$="again"]{display:none!important}
+.help{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;box-shadow:var(--sh)}
+.help summary{font-weight:800;cursor:pointer}
+.help p{margin:8px 0 2px;line-height:1.8}
 .stats{margin:-8px 0 14px;font-size:.85rem;color:var(--mut);font-weight:600}
 .best{font-size:.8rem;font-weight:700;color:var(--o);margin-top:2px}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:#e6ebf5;padding:5px;border-radius:16px}
@@ -89,6 +117,21 @@ if (/[?&]debug/.test(location.search)) {
   window.addEventListener("unhandledrejection", function (e) { showErr("خطأ: " + (e.reason && (e.reason.message || e.reason))); });
 }
 </script>
+<script>
+// إن لم يكتمل تحميل الألعاب خلال 8 ثوانٍ نعرض رسالة مساعدة بدل شبكة فارغة
+(function () {
+  var errs = [];
+  window.addEventListener("error", function (e) { errs.push(e.message || "فشل تحميل ملف"); }, true);
+  window.addEventListener("unhandledrejection", function (e) { errs.push(String(e.reason && (e.reason.message || e.reason))); });
+  setTimeout(function () {
+    if (window.__ok) return;
+    var g = document.getElementById("homeGames");
+    if (!g) return;
+    var det = errs.concat(window.__failed || []).join(" | ");
+    g.innerHTML = '<div class="panel" style="grid-column:1/-1;text-align:center"><b>😕 تعذّر تحميل الألعاب</b><p class="sub" style="margin:8px 0">جرّب بالترتيب:<br>١) أعد تحميل الصفحة<br>٢) افتح الرابط في Chrome أو Safari بدل متصفح واتساب أو فيسبوك<br>٣) أوقف حاجب الإعلانات أو الـVPN لهذا الموقع<br>٤) جرّب شبكة أخرى (بيانات الجوال)</p><button class="btn" onclick="location.reload()">🔄 إعادة المحاولة</button>' + (det ? '<details style="margin-top:10px;direction:ltr;text-align:left"><summary>تفاصيل تقنية</summary><small>' + det.replace(/</g, "&lt;") + '</small></details>' : '') + '</div>';
+  }, 8000);
+})();
+</script>
 <main>
   <section id="home">
     <div class="brand"><div class="logo">🎮</div><h1>ألعاب ثنائية</h1></div>
@@ -110,7 +153,8 @@ if (/[?&]debug/.test(location.search)) {
       <div id="botlvlbox" class="hidden"><label for="botlvl">مستوى الروبوت</label>
         <select id="botlvl"><option value="easy">سهل</option><option value="medium" selected>متوسط</option><option value="hard">صعب</option></select></div>
       <label id="pickLbl">اختر لعبة وأنشئ غرفة</label>
-      <div class="games" id="homeGames"></div>
+      <div class="games" id="homeGames"><p class="sub" style="grid-column:1/-1">⏳ جارٍ تحميل الألعاب…</p></div>
+      <noscript><p class="sub">⚠️ يلزم تفعيل JavaScript لتعمل الألعاب.</p></noscript>
       <label for="diff">صعوبة السودوكو</label>
       <select id="diff"><option value="easy">سهل</option><option value="medium" selected>متوسط</option><option value="hard">صعب</option></select>
     </div>
@@ -123,7 +167,7 @@ if (/[?&]debug/.test(location.search)) {
       </div>
     </div>
     <p id="err" role="alert"></p>
-    <button class="link hidden" id="own">أو أنشئ غرفتك الخاصة</button>
+    <button class="btn ghost hidden" id="own" style="width:100%;margin-top:12px">🎮 أو العب بمفردك / أنشئ غرفتك الخاصة</button>
   </section>
 
   <section id="room" class="hidden">
@@ -148,9 +192,11 @@ if (/[?&]debug/.test(location.search)) {
         <button class="btn ghost js-wa">💬 واتساب</button>
       </div>
     </div>
+    <div id="seriesBar" class="series hidden"></div>
     <div class="gtitle" id="gname"></div>
+    <details id="help" class="help hidden"><summary>❓ كيف ألعب؟</summary><p id="helpBody"></p></details>
     <div id="game"></div>
-    <div id="gameActions" class="hidden"><button class="btn ghost" id="change">🔄 تغيير اللعبة</button></div>
+    <div id="gameActions" class="hidden"><button class="btn ghost" id="change">🔄 تغيير اللعبة</button> <button class="btn ghost" id="tourn">🏆 بطولة</button></div>
   </section>
 </main>
 
@@ -161,43 +207,46 @@ if (/[?&]debug/.test(location.search)) {
     <div style="text-align:center;margin-top:14px"><button class="btn ghost" id="pickCancel">إلغاء</button></div>
   </div>
 </div>
+<div id="tpick" class="sheet hidden">
+  <div class="sheet-in">
+    <h3>🏆 بطولة: سلسلة ألعاب</h3>
+    <p class="sub" style="margin-bottom:10px">فوز = نقطتان، تعادل = نقطة. اختر الألعاب بالترتيب، أو دع الحظ يختار.</p>
+    <div class="row" style="margin-bottom:12px"><button class="btn ghost" id="tR3">🎲 3 ألعاب عشوائية</button><button class="btn ghost" id="tR5">🎲 5 ألعاب</button></div>
+    <div class="games" id="tGames"></div>
+    <div class="row" style="justify-content:center;margin-top:14px"><button class="btn" id="tStart" disabled>اختر ألعابًا</button><button class="btn ghost" id="tCancel">إلغاء</button></div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status"></div>
 
 <script type="module">
 import * as R from "./js/rooms.js";
-import xo from "./js/games/xo.js";
-import sudoku from "./js/games/sudoku.js";
-import color from "./js/games/color-game.js";
-import numberRush from "./js/games/number-rush.js";
-import balloonRace from "./js/games/balloon-game.js";
-import migration from "./js/games/migration.js";
-import memoryMatrix from "./js/games/memory-matrix.js";
-import mastermind from "./js/games/mastermind.js";
-import apc from "./js/games/apc.js";
-import { startBot } from "./js/bot.js";
-import oddOneOut from "./js/games/odd-one-out.js"; 
-import reverseMemory from "./js/games/reverse-memory.js";
-import battleship from "./js/games/battleship.js";
-import logicalMatrix from "./js/games/logical-matrix.js";
-  
-const G = { xo, sudoku, color, numberRush, balloonRace, migration, memoryMatrix, oddOneOut, reverseMemory, battleship, logicalMatrix, mastermind, apc };
+// الألعاب تُحمَّل واحدة واحدة: إن تعذّر تحميل لعبة تختفي هي وحدها ولا ينهار الموقع كله
+const failed = (window.__failed = window.__failed || []);
+const load = async (f) => { try { return await import(f); } catch (e) { failed.push(f + " — " + (e && e.message)); console.error("تعذّر تحميل", f, e); return null; } };
+const FILES = { xo: "xo", sudoku: "sudoku", color: "color-game", numberRush: "number-rush", balloonRace: "balloon-game", migration: "migration", memoryMatrix: "memory-matrix", oddOneOut: "odd-one-out", reverseMemory: "reverse-memory", battleship: "battleship", logicalMatrix: "logical-matrix", mastermind: "mastermind", apc: "apc" };
+const G = {};
+await Promise.all(Object.entries(FILES).map(async ([k, f]) => { const m = await load(`./js/games/${f}.js`); if (m && m.default) G[k] = m.default; }));
+const startBot = ((await load("./js/bot.js")) || {}).startBot || (() => () => {});
+const outcome = ((await load("./js/series.js")) || {}).outcome || (() => null);
 // قائمة الألعاب: لإضافة لعبة جديدة أضف سطرًا هنا وسطر الاستيراد أعلاه
 const LIST = [
-  { g: "xo", i: "⭕", t: "XO", d: "الكلاسيكية بالدور", c: "#e8475b", s: "wins" },
-  { g: "color", i: "🎨", t: "تحدي الألوان", d: "30 ثانية، الأكثر صحة يفوز", c: "#f59e0b" },
-  { g: "sudoku", m: "race", i: "🧩", t: "سودوكو سباق", d: "من يكمل أولًا", c: "#3b82f6", s: "wins" },
-  { g: "sudoku", m: "shared", i: "🤝", t: "سودوكو مشتركة", d: "نفس اللوحة بالنقاط", c: "#12a594" },
-  { g: "numberRush", i: "🔢", t: "تجميع الأرقام", d: "سباق الأرقام السريع (1-16)", c: "#8b5cf6" },
-  { g: "balloonRace", i: "🎈", t: "صراع البالونات", d: "فجّر بالوناتك بأسرع وقت", c: "#ec4899" },
-  { g: "migration", i: "🐦", t: "هجرة الطيور", d: "تحدي التركيز والانتباه", c: "#0ea5e9" },
-  { g: "oddOneOut", i: "🔍", t: "العنصر المختلف", d: "جد الشكل الشاذ بأسرع وقت", c: "#06b6d4" },
-  { g: "reverseMemory", i: "🔄", t: "الذاكرة العكسية", d: "تذكر النمط وأدخله بالعكس تماماً", c: "#f97316" },
-  { g: "memoryMatrix", i: "🧠", t: "ماتريكس الذاكرة", d: "اختبر ذاكرتك المكانية", c: "#16a34a" },
-  { g: "logicalMatrix", i: "🔗", t: "الروابط الخفية", d: "اكتشف التصنيفات والروابط المشتركة", c: "#14b8a6" },
-  { g: "battleship", i: "🚢", t: "المعركة البحرية", d: "اقصف أسطول خصمك ودمر سفنه", c: "#2563eb" },
-  { g: "mastermind", i: "🔐", t: "فك الشفرة", d: "استنتج الرمز السري بأقل محاولات", c: "#4f46e5", s: "wins" },
-  { g: "apc", i: "💡", t: "ألف استخدام", d: "60 ثانية لأفكار غير مكررة", c: "#f97316" },
+  { g: "xo", i: "⭕", t: "XO", d: "الكلاسيكية بالدور", c: "#e8475b", s: "wins", h: "اختر خانة فارغة بالدور. أول من يرتّب <b>3 رموزه</b> في صف أو عمود أو قطر يفوز." },
+  { g: "color", i: "🎨", t: "تحدي الألوان", d: "30 ثانية، الأكثر صحة يفوز", c: "#f59e0b", h: "تظهر كلمة بلون مختلف عن معناها. اضغط زر <b>لون الحرف</b> وليس معنى الكلمة. إن أخطأت يتجمد الضغط لحظة. الأكثر إجابات صحيحة خلال 30 ثانية يفوز." },
+  { g: "sudoku", m: "race", i: "🧩", t: "سودوكو سباق", d: "من يكمل أولًا", c: "#3b82f6", s: "wins", h: "املأ كل خانة فارغة بأرقام 1 إلى 9 بحيث <b>لا يتكرر الرقم</b> في الصف ولا العمود ولا المربع 3×3. الخانة الخاطئة تظهر بالأحمر. من يكمل لوحته أولًا يفوز." },
+  { g: "sudoku", m: "shared", i: "🤝", t: "سودوكو مشتركة", d: "نفس اللوحة بالنقاط", c: "#12a594", h: "لوحة واحدة للاثنين: اختر خانة ثم رقمًا. الرقم الصحيح يعطيك <b>نقطة</b> وتُقفل الخانة بلونك، والخطأ <b>يخصم نقطة</b>. من يملك نقاطًا أكثر في النهاية يفوز." },
+  { g: "numberRush", i: "🔢", t: "تجميع الأرقام", d: "سباق الأرقام السريع (1-16)", c: "#8b5cf6", h: "اضغط الأرقام من <b>1 إلى 16 بالترتيب</b>، والرقم الصحيح يختفي. من يكمل الأرقام أولًا يفوز، أو من أزال أرقامًا أكثر عند انتهاء 30 ثانية." },
+  { g: "balloonRace", i: "🎈", t: "صراع البالونات", d: "فجّر بالوناتك بأسرع وقت", c: "#ec4899", h: "فجّر البالونات التي <b>بلونك أنت فقط</b> (المنشئ أحمر والضيف أزرق) قبل أن تطير بعيدًا. الأكثر تفجيرًا خلال 30 ثانية يفوز." },
+  { g: "migration", i: "🐦", t: "هجرة الطيور", d: "تحدي التركيز والانتباه", c: "#0ea5e9", h: "اضغط سهم الاتجاه الذي يشير إليه <b>الطائر الذي في المنتصف</b> فقط، وتجاهل الطيور حوله. الأكثر إجابات صحيحة خلال 30 ثانية يفوز." },
+  { g: "oddOneOut", i: "🔍", t: "العنصر المختلف", d: "جد الشكل الشاذ بأسرع وقت", c: "#06b6d4", h: "بين أشكال متشابهة يوجد <b>شكل واحد مختلف</b>، اضغط عليه بسرعة. تكبر الشبكة كلما تقدمت. الأكثر نقاطًا خلال 30 ثانية يفوز." },
+  { g: "reverseMemory", i: "🔄", t: "الذاكرة العكسية", d: "تذكر النمط وأدخله بالعكس تماماً", c: "#f97316", h: "شاهد المربعات تضيء بالترتيب، ثم اضغطها <b>بالعكس</b> (من الأخير إلى الأول). كل نمط صحيح يعطيك نقطة ويصير أطول. المدة 45 ثانية." },
+  { g: "memoryMatrix", i: "🧠", t: "ماتريكس الذاكرة", d: "اختبر ذاكرتك المكانية", c: "#16a34a", h: "تضيء بعض المربعات لثانيتين تقريبًا، احفظ أماكنها ثم اضغطها كلها. كل مستوى يزيد عدد المربعات. زر 💡 يعيد الإضاءة لكنه يخصم نقطة. المدة 30 ثانية." },
+  { g: "logicalMatrix", i: "🔗", t: "الروابط الخفية", d: "اكتشف التصنيفات والروابط المشتركة", c: "#14b8a6", h: "أمامك 16 كلمة في <b>4 مجموعات</b>، لكل مجموعة رابط مشترك. اختر 4 كلمات تجمعها فكرة واحدة. من يكمل المجموعات الأربع أولًا يفوز، أو الأكثر مجموعات عند انتهاء 50 ثانية." },
+  { g: "battleship", i: "🚢", t: "المعركة البحرية", d: "اقصف أسطول خصمك ودمر سفنه", c: "#2563eb", s: "wins", h: "لكل لاعب <b>4 سفن مخبأة</b> في لوحة 5×5. اضغط لوحة الخصم لتقصفه بالدور، وإن أصبت تكرر الطلقة. من يدمّر سفن الخصم الأربع أولًا يفوز (المدة 90 ثانية)." },
+  { g: "mastermind", m: "guided", i: "🧭", t: "فك الشفرة (مرشد)", d: "إشارة تحت كل لون تبيّن هل مكانه صحيح", c: "#6366f1", s: "wins" },
+  { g: "mastermind", m: "classic", i: "🔐", t: "فك الشفرة (كلاسيكي)", d: "إشارات بلا أماكن، استنتجها بنفسك", c: "#4f46e5", s: "wins" },
+  { g: "apc", i: "💡", t: "ألف استخدام", d: "60 ثانية لأفكار غير مكررة", c: "#f97316", h: "اكتب خلال 60 ثانية أكبر عدد من <b>الاستخدامات غير المعتادة</b> للشيء المعروض. الفكرة المكررة بين اللاعبين تُلغى، ثم يراجع كل لاعب أفكار الآخر ويرفض غير المنطقي." }
 ];
+LIST.splice(0, LIST.length, ...LIST.filter((x) => G[x.g])); // لا نعرض إلا الألعاب التي تحمّلت فعلًا
 const $ = (s) => document.querySelector(s);
 const nameEl = $("#name"), errEl = $("#err");
 let code = null, unsub = null, unPres = null, prev = "", touched = 0, ac = null, shown = "", inv = null, tt, playMode = "friend", lastRoom = null, stopBot = null;
@@ -211,8 +260,9 @@ function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("o
 // أفضل نتيجة لي (محفوظة في هذا المتصفح): نقاط للألعاب، وعدد انتصارات لـ XO وسودوكو السباق
 const bestKey = (x) => "best:" + x.g + (x.m ? ":" + x.m : "");
 const bestOf = (x) => +localStorage.getItem(bestKey(x)) || 0;
+const bestTime = (x) => { const t = +localStorage.getItem(bestKey(x) + ":t"); return t ? " · " + t.toFixed(1) + " ث" : ""; };
 function cards(box, pick) {
-  box.innerHTML = LIST.map((x, k) => `<button class="game" data-k="${k}" style="--tint:${x.c}"><span class="ico">${x.i}</span><b>${x.t}</b><span class="d">${x.d}</span>${bestOf(x) ? `<span class="best">🏆 ${x.s === "wins" ? "انتصاراتك" : "أفضل نتيجة"}: ${bestOf(x)}</span>` : ""}</button>`).join("");
+  box.innerHTML = LIST.map((x, k) => `<button class="game" data-k="${k}" style="--tint:${x.c}"><span class="ico">${x.i}</span><b>${x.t}</b><span class="d">${x.d}</span>${bestOf(x) ? `<span class="best">🏆 ${x.s === "wins" ? "انتصاراتك" : "أفضل نتيجة"}: ${bestOf(x)}${bestTime(x)}</span>` : ""}</button>`).join("");
   box.onclick = (e) => { const b = e.target.closest(".game"); if (b) pick(LIST[b.dataset.k]); };
 }
 
@@ -256,7 +306,9 @@ function render(r) {
   if (gone) $("#offline").textContent = `${r[op].name} غير متصل حاليًا…`;
   $("#gameActions").classList.toggle("hidden", waiting || me === "spec");
   const t = LIST.find((x) => x.g === r.game && (!x.m || x.m === (r.state || {}).mode));
-  $("#gname").textContent = waiting || !t ? "" : `${t.i} ${t.t}` + (bestOf(t) ? ` · 🏆 ${bestOf(t)}` : "");
+  $("#gname").textContent = waiting || !t ? "" : `${t.i} ${t.t}` + (bestOf(t) ? ` · 🏆 ${bestOf(t)}${bestTime(t)}` : "");
+  const hp = $("#help"); hp.classList.toggle("hidden", waiting || !t || !t.h); if (t && t.h) $("#helpBody").innerHTML = t.h;
+  renderSeries(r, me, waiting);
   if (r.game !== shown) { shown = r.game; $("#game").innerHTML = ""; $("#game").removeAttribute("data-rc"); prev = ""; }
   if (!waiting) {
     const sig = JSON.stringify(r.state);
@@ -278,7 +330,10 @@ async function join(c) {
   c = c.trim().toUpperCase();
   if (c.length !== 4) { errEl.textContent = "الكود مكوّن من 4 حروف"; return; }
   try { await R.joinRoom(c, myName()); enter(c); }
-  catch (e) { errEl.textContent = e.message === "notfound" ? "لا توجد غرفة بهذا الكود" : "تعذّر الانضمام. تأكد من الاتصال."; }
+  catch (e) {
+    errEl.textContent = e.message === "notfound" ? "لا توجد غرفة بهذا الكود (ربما أُغلقت). يمكنك إنشاء غرفتك." : "تعذّر الانضمام. تأكد من الاتصال.";
+    if (e.message === "notfound" && inv) { history.replaceState(null, "", location.pathname); normal(); }
+  }
 }
 
 // تغيير اللعبة داخل نفس الغرفة
@@ -332,7 +387,7 @@ $("#leave").onclick = async () => {
   try { await R.leaveRoom(c); } catch (e) {}
   leave();
 };
-document.querySelectorAll(".js-wa").forEach((b) => b.onclick = () => window.open("https://wa.me/?text=" + encodeURIComponent("تعال العب معي! " + link()), "_blank"));
+document.querySelectorAll(".js-wa").forEach((b) => b.onclick = () => window.open("https://wa.me/?text=" + encodeURIComponent("تعال نلعب معي! " + link()), "_blank"));
 document.querySelectorAll(".js-copy").forEach((b) => b.onclick = async () => {
   try { await navigator.clipboard.writeText(link()); toast("تم نسخ الرابط ✓"); }
   catch { toast("انسخ الرابط من شريط العنوان"); }
@@ -372,17 +427,103 @@ function record(r) {
   sessionStorage.setItem(rk, "1");
   const old = bestOf(x);
   if (x.s === "wins") { if (res.win) { localStorage.setItem(bestKey(x), old + 1); toast(`🏆 انتصارك رقم ${old + 1}`); } }
-  else if (res.score > old) { localStorage.setItem(bestKey(x), res.score); toast(old ? `🎉 رقم قياسي جديد: ${res.score}` : `🏆 أول نتيجة لك: ${res.score}`); }
+  else {
+    const ot = +localStorage.getItem(bestKey(x) + ":t") || 0, tm = res.time || 0;
+    if (res.score > old || (res.score === old && tm && (!ot || tm < ot))) { // نفس العدد بوقت أسرع يُعدّ أفضل
+      localStorage.setItem(bestKey(x), res.score);
+      if (tm) localStorage.setItem(bestKey(x) + ":t", tm); else localStorage.removeItem(bestKey(x) + ":t");
+      toast((old ? "🎉 رقم قياسي جديد: " : "🏆 أول نتيجة لك: ") + res.score + (tm ? ` في ${tm.toFixed(1)} ث` : ""));
+    }
+  }
   cards($("#pickGames"), pick);
 }
-setInterval(() => { if (code && lastRoom) record(lastRoom); }, 500);
+setInterval(() => { if (code && lastRoom) { record(lastRoom); trackSeries(lastRoom); } }, 500);
 
 // ---- عدادات الصفحة الرئيسية ----
-R.lobbyStats((s) => {
+try { R.lobbyStats((s) => {
   const el = $("#stats");
   el.textContent = [s.online ? `🟢 ${s.online} متصلون الآن` : "", s.visitors ? `👥 ${s.visitors} زائر حتى الآن` : ""].filter(Boolean).join(" · ");
   el.classList.toggle("hidden", !el.textContent);
-});
+}); } catch (e) { console.warn(e); }
+
+$("#help").open = localStorage.getItem("help") !== "0"; // يتذكر إن أغلقت الشرح
+$("#help").ontoggle = (e) => localStorage.setItem("help", e.target.open ? "1" : "0");
+
+// ---- البطولة: سلسلة ألعاب بنقاط تراكمية (فوز = 2، تعادل = 1) ----
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const entryOf = (x) => LIST.find((y) => y.g === x.g && (!y.m || y.m === x.m));
+let tSel = [];
+
+function startSeries(ks) {
+  const list = ks.map((k) => { const x = { g: LIST[k].g }; if (LIST[k].m) x.m = LIST[k].m; return x; }), f = list[0];
+  $("#tpick").classList.add("hidden");
+  R.patch(code, { series: { list, i: 0 }, game: f.g, state: G[f.g].init(f.m, $("#diff").value) }).catch(() => toast("تعذّر بدء البطولة"));
+}
+function nextInSeries(sr) {
+  const i = sr.i + 1, x = sr.list[i];
+  R.patch(code, { "series/i": i, game: x.g, state: G[x.g].init(x.m, $("#diff").value) });
+}
+const randomKs = (n) => { const seen = new Set(); return LIST.map((_, k) => k).sort(() => Math.random() - 0.5).filter((k) => !seen.has(LIST[k].g) && seen.add(LIST[k].g)).slice(0, n); };
+function tRender() {
+  cards($("#tGames"), (x) => { const k = LIST.indexOf(x), p = tSel.indexOf(k); p >= 0 ? tSel.splice(p, 1) : tSel.push(k); tRender(); });
+  $("#tGames").querySelectorAll(".game").forEach((b) => {
+    const p = tSel.indexOf(+b.dataset.k);
+    b.classList.toggle("sel", p >= 0);
+    if (p >= 0) b.insertAdjacentHTML("afterbegin", `<i class="ord">${p + 1}</i>`);
+  });
+  $("#tStart").textContent = tSel.length ? `ابدأ بالمختارة (${tSel.length})` : "اختر ألعابًا";
+  $("#tStart").disabled = !tSel.length;
+}
+function openTournament() { tSel = []; tRender(); $("#tpick").classList.remove("hidden"); }
+
+function renderSeries(r, me, waiting) {
+  const sb = $("#seriesBar"), sr = r.series;
+  $("#game").classList.toggle("inseries", !!sr);
+  $("#change").classList.toggle("hidden", !!sr);
+  $("#tourn").classList.toggle("hidden", !!sr);
+  if (!sr || waiting) { sb.classList.add("hidden"); return; }
+  const res = sr.res || {}, n = sr.list.length;
+  let H = 0, Gp = 0;
+  Object.values(res).forEach((v) => { if (v === "host") H += 2; else if (v === "guest") Gp += 2; else { H++; Gp++; } });
+  const done = res["r" + sr.i] !== undefined, ended = done && sr.i >= n - 1, player = me !== "spec";
+  const you = (p) => (p === me ? " (أنت)" : "");
+  const chips = sr.list.map((x, k) => { const t = entryOf(x), v = res["r" + k]; return `<span class="s-chip ${k === sr.i ? "now" : ""}">${t ? t.i : "?"}${v ? (v === "draw" ? "🤝" : !player ? "🏅" : v === me ? "✅" : "❌") : ""}</span>`; }).join("");
+  let foot;
+  if (ended) {
+    const w = H > Gp ? "host" : Gp > H ? "guest" : null;
+    foot = `<b class="s-win">${w ? (w === me ? "🏆 فزت بالبطولة!" : "🏆 فاز " + esc(r[w].name) + " بالبطولة") : "🤝 تعادل في البطولة"}</b>` + (player ? '<div class="row"><button class="btn" data-s="new">بطولة جديدة</button><button class="btn ghost" data-s="end">إنهاء</button></div>' : "");
+  } else if (done) {
+    const nx = entryOf(sr.list[sr.i + 1]);
+    foot = "<span>✅ انتهت هذه اللعبة</span>" + (player ? `<div class="row"><button class="btn" data-s="next">التالية ▶ ${nx ? esc(nx.t) : ""}</button><button class="btn ghost" data-s="end">إنهاء</button></div>` : "");
+  } else {
+    foot = "<span>العبوا الآن!</span>" + (player ? '<div class="row"><button class="btn ghost" data-s="end">إنهاء البطولة</button></div>' : "");
+  }
+  const html = `<b>🏆 البطولة · لعبة ${sr.i + 1} من ${n}</b><div class="s-score"><span>${esc(r.host.name)}${you("host")}: ${H}</span><span>${esc(r.guest.name)}${you("guest")}: ${Gp}</span></div><div class="s-chips">${chips}</div><div class="s-foot">${foot}</div>`;
+  if (sb._h !== html) { sb._h = html; sb.innerHTML = html; }
+  sb.classList.remove("hidden");
+}
+// كلا اللاعبين يكتب نفس النتيجة في نفس المكان، فلا تتكرر النقاط
+function trackSeries(r) {
+  const sr = r && r.series, me = R.role(code);
+  if (!sr || !me || me === "spec") return;
+  const x = sr.list[sr.i];
+  if (!x || r.game !== x.g || (x.m && x.m !== (r.state || {}).mode) || (sr.res && sr.res["r" + sr.i] !== undefined)) return;
+  const o = outcome(r, G);
+  if (o) R.patch(code, { [`series/res/r${sr.i}`]: o.w });
+}
+$("#seriesBar").onclick = (e) => {
+  const b = e.target.closest("[data-s]");
+  if (!b || !lastRoom || !lastRoom.series) return;
+  if (b.dataset.s === "next") nextInSeries(lastRoom.series);
+  else if (b.dataset.s === "end") R.patch(code, { series: null });
+  else if (b.dataset.s === "new") { R.patch(code, { series: null }); openTournament(); }
+};
+$("#tourn").onclick = openTournament;
+$("#tR3").onclick = () => startSeries(randomKs(3));
+$("#tR5").onclick = () => startSeries(randomKs(5));
+$("#tStart").onclick = () => tSel.length && startSeries(tSel);
+$("#tCancel").onclick = () => $("#tpick").classList.add("hidden");
+$("#tpick").onclick = (e) => { if (e.target.id === "tpick") e.target.classList.add("hidden"); };
 
 window.__ok = true;
 
