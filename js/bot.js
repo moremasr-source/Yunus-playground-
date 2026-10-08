@@ -1,6 +1,7 @@
 import { now } from "./rooms.js";
 import { getBalloons } from "./games/balloon-game.js";
 import { codeOf, feedback, MAXG } from "./games/mastermind.js";
+import { getPlayerShips } from "./games/battleship.js";
 
 // الروبوت يلعب دور "الضيف" من جهاز المنشئ، بنفس الكتابات التي يكتبها لاعب حقيقي.
 const DUR = 30000;
@@ -10,7 +11,8 @@ const jit = (ms) => ms * (0.7 + Math.random() * 0.6);
 // الفاصل (بالملّي ثانية) بين كل نقطة يحرزها الروبوت: [سهل، متوسط، صعب]. قلّله ليصبح أسرع.
 const PACE = {
   color: [2200, 1300, 800], migration: [1700, 1050, 680], memoryMatrix: [9000, 6000, 4200],
-  numberRush: [1900, 1400, 1000], balloonRace: [1400, 900, 550], sudoku: [7000, 4500, 2800], mastermind: [9000, 6000, 3500]
+  numberRush: [1900, 1400, 1000], balloonRace: [1400, 900, 550], sudoku: [7000, 4500, 2800], mastermind: [9000, 6000, 3500],
+  oddOneOut: [2200, 1400, 900], reverseMemory: [16000, 10000, 6500], logicalMatrix: [14000, 9000, 5500], battleship: [2200, 1500, 1000]
 };
 
 function due(c, t) {
@@ -19,8 +21,14 @@ function due(c, t) {
   c.next = t + jit(c.pace);
   return true;
 }
-const live = (s, t) => s.startAt && t >= s.startAt && t < Math.min(s.startAt + DUR, ...Object.values(s.finish || {}));
-const score = (r, p, c) => { const t = now(); if (live(r.state, t) && due(c, t)) p({ "state/scores/guest": (r.state.scores.guest || 0) + 1 }); };
+const live = (s, t, dur = DUR) => s.startAt && t >= s.startAt && t < Math.min(s.startAt + dur, ...Object.values(s.finish || {}));
+// نقطة واحدة كل فترة: dur مدة اللعبة، وcap الحد الذي تنتهي عنده اللعبة (إن وُجد)
+const scoreFor = (dur, cap = Infinity) => (r, p, c) => {
+  const t = now(), sc = r.state.scores || {};
+  if ((sc.guest || 0) >= cap || (sc.host || 0) >= cap) return;
+  if (live(r.state, t, dur) && due(c, t)) p({ "state/scores/guest": (sc.guest || 0) + 1 });
+};
+const score = scoreFor(DUR);
 
 // كل الشفرات الممكنة في فك الشفرة (4 ألوان مختلفة من 6)
 const ALL = (() => { const out = []; const go = (c) => { if (c.length === 4) return out.push(c); for (let d = 0; d < 6; d++) if (!c.includes(d)) go(c + d); }; go(""); return out; })();
@@ -57,6 +65,23 @@ function xoMove(b, lvl) {
 
 const BOTS = {
   color: score, migration: score, memoryMatrix: score,
+  oddOneOut: scoreFor(30000), reverseMemory: scoreFor(45000), logicalMatrix: scoreFor(50000, 4),
+
+  // المعركة البحرية: يقصف لوحة اللاعب بالدور. السهل عشوائي، والمتوسط والصعب يطاردان السفينة بعد الإصابة.
+  battleship: (r, p, c) => {
+    const s = r.state, t = now(), sc = s.scores || {};
+    if (!s.startAt || t < s.startAt || t >= s.startAt + 90000 || (sc.host || 0) >= 4 || (sc.guest || 0) >= 4 || s.turn !== "guest" || !due(c, t)) return;
+    const shots = (s.shots && s.shots.guest) || {}, free = [];
+    for (let i = 0; i < 25; i++) if (shots[i] == null) free.push(i);
+    if (!free.length) return;
+    let cell = pick(free);
+    if (c.lvl >= 1) {
+      const near = free.filter((i) => [i - 5, i + 5, i - 1, i + 1].some((j) => j >= 0 && j < 25 && shots[j] === "hit" && (Math.abs(i - j) === 5 || (i / 5 | 0) === (j / 5 | 0))));
+      if (near.length) cell = pick(near);
+    }
+    const hit = getPlayerShips(s.seed, "host").includes(cell);
+    p({ "state/shots/guest": { ...shots, [cell]: hit ? "hit" : "miss" }, "state/scores/guest": (sc.guest || 0) + (hit ? 1 : 0), "state/turn": hit ? "guest" : "host" });
+  },
 
   // يخمّن شفرة متسقة مع كل ما عرفه حتى الآن (السهل يخمّن عشوائيًا نصف المرات)
   mastermind: (r, p, c) => {
