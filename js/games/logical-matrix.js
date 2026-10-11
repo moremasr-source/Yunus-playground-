@@ -53,8 +53,8 @@ const CSS = `.lm{text-align:center}
 .lm-time{font-size:2.2rem;font-weight:800}
 .lm-bar{height:10px;background:#d5dee9;border-radius:6px;overflow:hidden;margin:4px 0 8px}
 .lm-bar i{display:block;height:100%;width:100%;background:var(--ink);transition:width .1s linear}
-.lm-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;margin:15px auto;max-width:360px}
-.lm-tile{aspect-ratio:1.2;background:#f8faff;border:2px solid var(--line);border-radius:12px;font-size:0.95rem;font-weight:700;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:manipulation;transition:all .15s ease;padding:4px;text-align:center}
+.lm-grid{display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:8px;margin:15px auto;max-width:360px}
+.lm-tile{aspect-ratio:1.2;background:#f8faff;border:2px solid var(--line);border-radius:12px;font-size:0.95rem;font-weight:700;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:manipulation;transition:all .15s ease;padding:4px;text-align:center;min-width:0;overflow-wrap:anywhere}
 .lm-tile:hover:not(:disabled){border-color:var(--o);transform:translateY(-2px)}
 .lm-tile.selected{background:#38bdf8;color:#fff;border-color:#0284c7;transform:scale(0.97)}
 .lm-tile.solved{background:#22c55e;color:#fff;border-color:#16a34a;cursor:default}

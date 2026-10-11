@@ -156,6 +156,7 @@ function tick() {
   }
 
   q("rm-again").classList.toggle("hidden", !(final && !spec));
+  q("rm-replay").classList.toggle("hidden", !(ph === "play" && !spec && !showingPattern));
 }
 
 function build(el, room) {
@@ -172,6 +173,7 @@ function build(el, room) {
     <div class="rm-grid" id="rm-grid" data-shown="-1">
       ${Array.from({ length: 9 }, (_, i) => `<button class="rm-tile" data-index="${i}">🔹</button>`).join("")}
     </div>
+    <button class="btn ghost hidden" id="rm-replay" style="margin-top:10px;width:100%">👁 أعد عرض النمط</button>
     <button class="btn hidden" id="rm-again" style="margin-top:15px;width:100%">جولة جديدة</button>
   </div>`;
 
@@ -181,6 +183,12 @@ function build(el, room) {
       e.preventDefault();
       choose(parseInt(btn.dataset.index, 10));
     }
+  };
+
+  el.querySelector("#rm-replay").onclick = () => {
+    if (!cur || cur.me === "spec" || phase(cur.room.state) !== "play" || showingPattern) return;
+    const s = cur.room.state;
+    triggerShowPattern(getPattern(s.seed, (s.scores && s.scores[cur.me]) || 0)); // بدون خصم نقاط: الوقت هو الثمن
   };
 
   el.querySelector("#rm-again").onclick = () => {

@@ -38,8 +38,8 @@ function make(n) {
 }
 
 // ---- الواجهة ----
-const CSS = `.sdk{direction:ltr;display:grid;grid-template-columns:repeat(9,1fr);border:3px solid var(--ink);border-radius:8px;overflow:hidden;background:#fff}
-.sdk button{aspect-ratio:1;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff;font:600 clamp(1rem,5.5vw,1.5rem) Cairo,sans-serif;color:var(--o);padding:0;cursor:pointer}
+const CSS = `.sdk{direction:ltr;display:grid;grid-template-columns:repeat(9,minmax(0,1fr));border:3px solid var(--ink);border-radius:8px;overflow:hidden;background:#fff}
+.sdk button{aspect-ratio:1;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff;font:600 clamp(.85rem,4.6vw,1.5rem) Cairo,sans-serif;line-height:1;min-width:0;min-height:0;overflow:hidden;color:var(--o);padding:0;cursor:pointer}
 .sdk .g{color:var(--ink);font-weight:800;background:#eef2f7;cursor:default}
 .sdk .oh{color:var(--x)}.sdk .og{color:var(--o)}
 .sdk .br{border-right:2px solid var(--ink)}.sdk .bb{border-bottom:2px solid var(--ink)}
