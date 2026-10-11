@@ -50,6 +50,7 @@ button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
 .link{background:none;border:0;color:var(--o);font:inherit;font-weight:700;cursor:pointer;margin-top:14px;text-decoration:underline}
 #err{color:var(--x);min-height:1.5em;margin:12px 0 0;font-weight:600}
 .hidden{display:none!important}
+@media (max-width:400px){main{padding-left:10px;padding-right:10px}main #game{padding:10px}}
 .game{position:relative}
 .game.sel{border-color:var(--tint);box-shadow:0 0 0 3px rgba(18,165,148,.25)}
 .ord{position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font:700 .85rem Cairo,sans-serif;font-style:normal}
@@ -367,12 +368,12 @@ $("#seg").onclick = (e) => {
 };
 cards($("#pickGames"), pick);
 $("#joinBtn").onclick = () => join($("#join").value);
-$("#join").onkeydown = (e) => e.key === "Enter" && join(e.target.value);
+$("#join").onkeydown = (e) => { if (e.key === "Enter") join(e.target.value); };
 $("#invJoin").onclick = () => {
   if (!nameEl.value.trim()) { errEl.textContent = "اكتب اسمك أولًا ثم اضغط انضم"; nameEl.focus(); return; }
   join(inv);
 };
-nameEl.onkeydown = (e) => e.key === "Enter" && inv && $("#invJoin").click();
+nameEl.onkeydown = (e) => { if (e.key === "Enter" && inv) $("#invJoin").click(); };
 $("#own").onclick = () => { history.replaceState(null, "", location.pathname); normal(); errEl.textContent = ""; };
 $("#change").onclick = () => $("#picker").classList.remove("hidden");
 $("#pickCancel").onclick = () => $("#picker").classList.add("hidden");
