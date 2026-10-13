@@ -6,6 +6,7 @@ const DURS = { color: 30000, migration: 30000, memoryMatrix: 30000, balloonRace:
 // يحدد هل انتهت اللعبة الحالية ومن فاز: { w: "host" | "guest" | "draw" } أو null إن لم تنتهِ.
 // نفس الحساب يجريه الطرفان فتكون النتيجة واحدة، وتُكتب مرة واحدة في البطولة.
 export function outcome(r, G) {
+  if (G[r.game] && G[r.game].outcome) return G[r.game].outcome(r); // الألعاب الجديدة تحدد نتيجتها بنفسها
   const s = r.state || {}, sc = s.scores || {}, H = sc.host || 0, Gu = sc.guest || 0, t = now();
   const cmp = () => (H > Gu ? "host" : Gu > H ? "guest" : "draw");
   const after = (dur) => s.startAt && t > s.startAt + dur + 1500; // بعد مهلة احتساب النتيجة

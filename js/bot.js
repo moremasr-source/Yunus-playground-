@@ -2,6 +2,7 @@ import { now } from "./rooms.js";
 import { getBalloons } from "./games/balloon-game.js";
 import { codeOf, feedback, MAXG } from "./games/mastermind.js";
 import { getPlayerShips } from "./games/battleship.js";
+import { diffsOf } from "./games/spot-diff.js";
 
 // الروبوت يلعب دور "الضيف" من جهاز المنشئ، بنفس الكتابات التي يكتبها لاعب حقيقي.
 const DUR = 30000;
@@ -12,7 +13,8 @@ const jit = (ms) => ms * (0.7 + Math.random() * 0.6);
 const PACE = {
   color: [2200, 1300, 800], migration: [1700, 1050, 680], memoryMatrix: [9000, 6000, 4200],
   numberRush: [1900, 1400, 1000], balloonRace: [1400, 900, 550], sudoku: [7000, 4500, 2800], mastermind: [9000, 6000, 3500],
-  oddOneOut: [2200, 1400, 900], reverseMemory: [16000, 10000, 6500], logicalMatrix: [14000, 9000, 5500], battleship: [2200, 1500, 1000]
+  oddOneOut: [2200, 1400, 900], reverseMemory: [16000, 10000, 6500], logicalMatrix: [14000, 9000, 5500], battleship: [2200, 1500, 1000],
+  feelings: [6000, 4000, 2500], notBelong: [5500, 3600, 2200], spotDiff: [6000, 3800, 2200]
 };
 
 function due(c, t) {
@@ -66,6 +68,28 @@ function xoMove(b, lvl) {
 const BOTS = {
   color: score, migration: score, memoryMatrix: score,
   oddOneOut: scoreFor(30000), reverseMemory: scoreFor(45000), logicalMatrix: scoreFor(50000, 4),
+  feelings: scoreFor(45000), notBelong: scoreFor(45000),
+
+  // اكتشف الاختلافات: يجد اختلافًا كل فترة (في السباق على لوحته، وفي المشترك يحجز اختلافًا لم يُحجز)
+  spotDiff: (r, p, c) => {
+    const s = r.state, t = now();
+    if (!live(s, t, 60000) || !due(c, t)) return;
+    const ds = diffsOf(s.seed);
+    if (s.mode === "shared") {
+      const cl = s.claim || {}, free = ds.filter((i) => !cl["c" + i]);
+      if (!free.length) return;
+      const q = { [`state/claim/c${pick(free)}`]: "guest" };
+      if (Object.keys(cl).length + 1 >= 5) q["state/finish/guest"] = t;
+      p(q);
+    } else {
+      const mine = s.found && s.found.guest ? s.found.guest.split(",").filter(Boolean).map(Number) : [], free = ds.filter((i) => !mine.includes(i));
+      if (!free.length) return;
+      mine.push(pick(free));
+      const q = { "state/found/guest": mine.join(",") };
+      if (mine.length >= 5) q["state/finish/guest"] = t;
+      p(q);
+    }
+  },
 
   // المعركة البحرية: يقصف لوحة اللاعب بالدور. السهل عشوائي، والمتوسط والصعب يطاردان السفينة بعد الإصابة.
   battleship: (r, p, c) => {
