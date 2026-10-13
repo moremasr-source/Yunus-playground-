@@ -197,6 +197,7 @@ if (/[?&]debug/.test(location.search)) {
     <div class="gtitle" id="gname"></div>
     <details id="help" class="help hidden"><summary>❓ كيف ألعب؟</summary><p id="helpBody"></p></details>
     <div id="game"></div>
+    <p id="hostNote" class="sub hidden" style="text-align:center;margin-top:12px">🎮 صاحب الغرفة هو من يغيّر اللعبة ويبدأ البطولة</p>
     <div id="gameActions" class="hidden"><button class="btn ghost" id="change">🔄 تغيير اللعبة</button> <button class="btn ghost" id="tourn">🏆 بطولة</button></div>
   </section>
 </main>
@@ -224,7 +225,7 @@ import * as R from "./js/rooms.js";
 // الألعاب تُحمَّل واحدة واحدة: إن تعذّر تحميل لعبة تختفي هي وحدها ولا ينهار الموقع كله
 const failed = (window.__failed = window.__failed || []);
 const load = async (f) => { try { return await import(f); } catch (e) { failed.push(f + " — " + (e && e.message)); console.error("تعذّر تحميل", f, e); return null; } };
-const FILES = { xo: "xo", sudoku: "sudoku", color: "color-game", numberRush: "number-rush", balloonRace: "balloon-game", migration: "migration", memoryMatrix: "memory-matrix", oddOneOut: "odd-one-out", reverseMemory: "reverse-memory", battleship: "battleship", logicalMatrix: "logical-matrix", mastermind: "mastermind", apc: "apc" };
+const FILES = { xo: "xo", sudoku: "sudoku", color: "color-game", numberRush: "number-rush", balloonRace: "balloon-game", migration: "migration", memoryMatrix: "memory-matrix", oddOneOut: "odd-one-out", reverseMemory: "reverse-memory", battleship: "battleship", logicalMatrix: "logical-matrix", mastermind: "mastermind", apc: "apc", feelings: "feelings", notBelong: "not-belong", spotDiff: "spot-diff" };
 const G = {};
 await Promise.all(Object.entries(FILES).map(async ([k, f]) => { const m = await load(`./js/games/${f}.js`); if (m && m.default) G[k] = m.default; }));
 const startBot = ((await load("./js/bot.js")) || {}).startBot || (() => () => {});
@@ -245,6 +246,10 @@ const LIST = [
   { g: "battleship", i: "🚢", t: "المعركة البحرية", d: "اقصف أسطول خصمك ودمر سفنه", c: "#2563eb", s: "wins", h: "لكل لاعب <b>4 سفن مخبأة</b> في لوحة 5×5. اضغط لوحة الخصم لتقصفه بالدور، وإن أصبت تكرر الطلقة. من يدمّر سفن الخصم الأربع أولًا يفوز (المدة 90 ثانية)." },
   { g: "mastermind", m: "guided", i: "🧭", t: "فك الشفرة (مرشد)", d: "إشارة تحت كل لون تبيّن هل مكانه صحيح", c: "#6366f1", s: "wins" },
   { g: "mastermind", m: "classic", i: "🔐", t: "فك الشفرة (كلاسيكي)", d: "إشارات بلا أماكن، استنتجها بنفسك", c: "#4f46e5", s: "wins" },
+  { g: "feelings", i: "😊", t: "خمّن الشعور", d: "ماذا يشعر بطل الموقف؟", c: "#f43f5e", h: "اقرأ الموقف القصير واختر <b>الشعور الأنسب</b> له. بعد كل إجابة يظهر تفسير قصير لماذا هذا هو الشعور. الأكثر إجابات صحيحة خلال 45 ثانية يفوز." },
+  { g: "notBelong", i: "🧐", t: "ماذا لا ينتمي؟", d: "اكتشف العنصر الدخيل", c: "#0d9488", h: "أربعة عناصر، ثلاثة منها تجمعها فكرة واحدة. اضغط <b>العنصر الدخيل</b>. بعد كل إجابة يظهر سبب الاختيار. الأكثر إجابات صحيحة خلال 45 ثانية يفوز." },
+  { g: "spotDiff", m: "race", i: "🔎", t: "اكتشف الاختلافات (سباق)", d: "من يجد الاختلافات الخمسة أولًا", c: "#65a30d", h: "قارن الصورة الأصلية بالمعدّلة واضغط على <b>5 اختلافات</b> في الصورة السفلى (رمز مختلف، أو اختفى، أو أصغر). كل لاعب له لوحته، ومن يجدها كلها أولًا يفوز. المدة 60 ثانية." },
+  { g: "spotDiff", m: "shared", i: "👀", t: "اكتشف الاختلافات (مشترك)", d: "نفس الصورة: الاختلاف لأول من يجده", c: "#0891b2", h: "صورة واحدة للاثنين: اضغط على الاختلافات في الصورة السفلى، وكل اختلاف يُحسب <b>لأول من يجده</b> ويتلوّن بلونك. الأكثر اختلافات يفوز. المدة 60 ثانية." },
   { g: "apc", i: "💡", t: "ألف استخدام", d: "60 ثانية لأفكار غير مكررة", c: "#f97316", h: "اكتب خلال 60 ثانية أكبر عدد من <b>الاستخدامات غير المعتادة</b> للشيء المعروض. الفكرة المكررة بين اللاعبين تُلغى، ثم يراجع كل لاعب أفكار الآخر ويرفض غير المنطقي." }
 ];
 LIST.splice(0, LIST.length, ...LIST.filter((x) => G[x.g])); // لا نعرض إلا الألعاب التي تحمّلت فعلًا
@@ -305,7 +310,8 @@ function render(r) {
   const gone = me !== "spec" && r.guest && !r.guest.bot && on[me] && !on[op];
   $("#offline").classList.toggle("hidden", !gone);
   if (gone) $("#offline").textContent = `${r[op].name} غير متصل حاليًا…`;
-  $("#gameActions").classList.toggle("hidden", waiting || me === "spec");
+  $("#gameActions").classList.toggle("hidden", waiting || me !== "host"); // تغيير اللعبة والبطولة للمنشئ فقط
+  $("#hostNote").classList.toggle("hidden", waiting || me !== "guest" || !!r.series);
   const t = LIST.find((x) => x.g === r.game && (!x.m || x.m === (r.state || {}).mode));
   $("#gname").textContent = waiting || !t ? "" : `${t.i} ${t.t}` + (bestOf(t) ? ` · 🏆 ${bestOf(t)}${bestTime(t)}` : "");
   const hp = $("#help"); hp.classList.toggle("hidden", waiting || !t || !t.h); if (t && t.h) $("#helpBody").innerHTML = t.h;
@@ -339,6 +345,7 @@ async function join(c) {
 
 // تغيير اللعبة داخل نفس الغرفة
 function pick(x) {
+  if (R.role(code) !== "host") return;
   $("#picker").classList.add("hidden");
   R.patch(code, { game: x.g, state: G[x.g].init(x.m, $("#diff").value) }).catch(() => toast("تعذّر تغيير اللعبة"));
 }
@@ -456,11 +463,13 @@ const entryOf = (x) => LIST.find((y) => y.g === x.g && (!y.m || y.m === x.m));
 let tSel = [];
 
 function startSeries(ks) {
+  if (R.role(code) !== "host") return;
   const list = ks.map((k) => { const x = { g: LIST[k].g }; if (LIST[k].m) x.m = LIST[k].m; return x; }), f = list[0];
   $("#tpick").classList.add("hidden");
   R.patch(code, { series: { list, i: 0 }, game: f.g, state: G[f.g].init(f.m, $("#diff").value) }).catch(() => toast("تعذّر بدء البطولة"));
 }
 function nextInSeries(sr) {
+  if (R.role(code) !== "host") return;
   const i = sr.i + 1, x = sr.list[i];
   R.patch(code, { "series/i": i, game: x.g, state: G[x.g].init(x.m, $("#diff").value) });
 }
@@ -475,7 +484,8 @@ function tRender() {
   $("#tStart").textContent = tSel.length ? `ابدأ بالمختارة (${tSel.length})` : "اختر ألعابًا";
   $("#tStart").disabled = !tSel.length;
 }
-function openTournament() { tSel = []; tRender(); $("#tpick").classList.remove("hidden"); }
+function openTournament() {
+  if (R.role(code) !== "host") return; tSel = []; tRender(); $("#tpick").classList.remove("hidden"); }
 
 function renderSeries(r, me, waiting) {
   const sb = $("#seriesBar"), sr = r.series;
@@ -486,18 +496,18 @@ function renderSeries(r, me, waiting) {
   const res = sr.res || {}, n = sr.list.length;
   let H = 0, Gp = 0;
   Object.values(res).forEach((v) => { if (v === "host") H += 2; else if (v === "guest") Gp += 2; else { H++; Gp++; } });
-  const done = res["r" + sr.i] !== undefined, ended = done && sr.i >= n - 1, player = me !== "spec";
+  const done = res["r" + sr.i] !== undefined, ended = done && sr.i >= n - 1, player = me !== "spec", isHost = me === "host";
   const you = (p) => (p === me ? " (أنت)" : "");
   const chips = sr.list.map((x, k) => { const t = entryOf(x), v = res["r" + k]; return `<span class="s-chip ${k === sr.i ? "now" : ""}">${t ? t.i : "?"}${v ? (v === "draw" ? "🤝" : !player ? "🏅" : v === me ? "✅" : "❌") : ""}</span>`; }).join("");
   let foot;
   if (ended) {
     const w = H > Gp ? "host" : Gp > H ? "guest" : null;
-    foot = `<b class="s-win">${w ? (w === me ? "🏆 فزت بالبطولة!" : "🏆 فاز " + esc(r[w].name) + " بالبطولة") : "🤝 تعادل في البطولة"}</b>` + (player ? '<div class="row"><button class="btn" data-s="new">بطولة جديدة</button><button class="btn ghost" data-s="end">إنهاء</button></div>' : "");
+    foot = `<b class="s-win">${w ? (w === me ? "🏆 فزت بالبطولة!" : "🏆 فاز " + esc(r[w].name) + " بالبطولة") : "🤝 تعادل في البطولة"}</b>` + (isHost ? '<div class="row"><button class="btn" data-s="new">بطولة جديدة</button><button class="btn ghost" data-s="end">إنهاء</button></div>' : "");
   } else if (done) {
     const nx = entryOf(sr.list[sr.i + 1]);
-    foot = "<span>✅ انتهت هذه اللعبة</span>" + (player ? `<div class="row"><button class="btn" data-s="next">التالية ▶ ${nx ? esc(nx.t) : ""}</button><button class="btn ghost" data-s="end">إنهاء</button></div>` : "");
+    foot = "<span>✅ انتهت هذه اللعبة" + (me === "guest" ? " · بانتظار المنشئ ليبدأ التالية…" : "") + "</span>" + (isHost ? `<div class="row"><button class="btn" data-s="next">التالية ▶ ${nx ? esc(nx.t) : ""}</button><button class="btn ghost" data-s="end">إنهاء</button></div>` : "");
   } else {
-    foot = "<span>العبوا الآن!</span>" + (player ? '<div class="row"><button class="btn ghost" data-s="end">إنهاء البطولة</button></div>' : "");
+    foot = "<span>العبوا الآن!</span>" + (isHost ? '<div class="row"><button class="btn ghost" data-s="end">إنهاء البطولة</button></div>' : "");
   }
   const html = `<b>🏆 البطولة · لعبة ${sr.i + 1} من ${n}</b><div class="s-score"><span>${esc(r.host.name)}${you("host")}: ${H}</span><span>${esc(r.guest.name)}${you("guest")}: ${Gp}</span></div><div class="s-chips">${chips}</div><div class="s-foot">${foot}</div>`;
   if (sb._h !== html) { sb._h = html; sb.innerHTML = html; }
@@ -514,7 +524,7 @@ function trackSeries(r) {
 }
 $("#seriesBar").onclick = (e) => {
   const b = e.target.closest("[data-s]");
-  if (!b || !lastRoom || !lastRoom.series) return;
+  if (!b || !lastRoom || !lastRoom.series || R.role(code) !== "host") return;
   if (b.dataset.s === "next") nextInSeries(lastRoom.series);
   else if (b.dataset.s === "end") R.patch(code, { series: null });
   else if (b.dataset.s === "new") { R.patch(code, { series: null }); openTournament(); }
